@@ -15,34 +15,28 @@ A complete working example of SMLV SDK integration into a PHP SaaS application.
 composer require smlv/sdk
 ```
 
-## Step 2 — Configure environment
+## Step 2 — Register SMLV component (Yii2)
 
-```dotenv
-# .env
-SMLV_API_URL=https://api.smlv.com
-SMLV_API_KEY=pk_live_xxxxxxxxxxxx
-SMLV_API_SECRET=sk_live_xxxxxxxxxxxx
-SMLV_WIDGET_SECRET=ws_live_xxxxxxxxxxxx
-```
-
-## Step 3 — Register SMLV component (Yii2)
+Добавьте компонент в `common/config/main-local.php` (этот файл уже есть в `.gitignore` шаблона — безопасное место для секретов):
 
 ```php
-// common/config/main.php
+// common/config/main-local.php
 return [
     'components' => [
         'smlv' => [
-            'class' => \Smlv\Sdk\Yii2\SmlvComponent::class,
-            'apiUrl'       => getenv('SMLV_API_URL'),
-            'apiKey'       => getenv('SMLV_API_KEY'),
-            'apiSecret'    => getenv('SMLV_API_SECRET'),
-            'widgetSecret' => getenv('SMLV_WIDGET_SECRET'),
+            'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
+            'apiUrl'       => 'https://api.smlv.com',
+            'apiKey'       => 'pk_live_xxxxxxxxxxxx',
+            'apiSecret'    => 'sk_live_xxxxxxxxxxxx',
+            'widgetSecret' => 'ws_live_xxxxxxxxxxxx',
         ],
     ],
 ];
 ```
 
-## Step 4 — Billing page controller
+> Замените значения на реальные ключи из вашего SMLV личного кабинета. Не коммитьте `main-local.php` в репозиторий.
+
+## Step 3 — Billing page controller
 
 ```php
 // frontend/controllers/BillingController.php
@@ -86,7 +80,7 @@ class BillingController extends Controller
 }
 ```
 
-## Step 5 — Billing view
+## Step 4 — Billing view
 
 ```php
 <!-- frontend/views/billing/index.php -->
@@ -121,7 +115,7 @@ class BillingController extends Controller
 
 On first visit the widget will display a brief account-creation form inside the widget area — **no extra server-side code or database columns required**.
 
-## Step 6 — Account management page
+## Step 5 — Account management page
 
 ```php
 // Controller action
@@ -147,7 +141,7 @@ The management widget provides:
 - **Edit tab** — update profile fields via PATCH `/account`
 - **Danger Zone tab** — deactivate or permanently delete account
 
-## Step 7 — Webhook endpoint
+## Step 6 — Webhook endpoint
 
 Create a controller that receives SMLV event notifications:
 

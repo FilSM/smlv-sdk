@@ -16,7 +16,7 @@ PHP SDK for integrating SMLV billing into your SaaS application.
 ## Requirements
 
 - PHP 7.4+
-- `firebase/php-jwt` ^6.0
+- `firebase/php-jwt` ^6.0 || ^7.0
 
 ## Installation
 
@@ -26,27 +26,20 @@ composer require smlv/sdk
 
 ## Quick Start
 
-### 1. Configure `.env`
-
-```dotenv
-SMLV_API_URL=https://api.smlv.com
-SMLV_API_KEY=your-api-key
-SMLV_API_SECRET=your-api-secret
-SMLV_WIDGET_SECRET=your-widget-secret
-```
-
-### 2. Initialize the client
+### 1. Initialize the client
 
 ```php
 use Smlv\Sdk\SmlvClient;
 
-$smlv = new SmlvClient(
-    apiKey:    getenv('SMLV_API_KEY'),
-    apiSecret: getenv('SMLV_API_SECRET'),
-    apiUrl:    getenv('SMLV_API_URL'),
-    widgetSecret: getenv('SMLV_WIDGET_SECRET')
-);
+$smlv = new SmlvClient([
+    'api_url'       => 'https://api.smlv.com',
+    'api_key'       => 'your-api-key',
+    'api_secret'    => 'your-api-secret',
+    'widget_secret' => 'your-widget-secret',
+]);
 ```
+
+> Keep credentials in a config file that is excluded from version control (e.g. `main-local.php` in Yii2, `services.php` in Laravel). **Never commit real keys to git.**
 
 ### 3. Embed a widget
 
@@ -212,7 +205,7 @@ try {
 ```php
 // config/services.php
 'smlv' => [
-    'api_url'       => env('SMLV_API_URL'),
+    'api_url'       => env('SMLV_API_URL', 'https://api.smlv.com'),
     'api_key'       => env('SMLV_API_KEY'),
     'api_secret'    => env('SMLV_API_SECRET'),
     'widget_secret' => env('SMLV_WIDGET_SECRET'),
@@ -230,16 +223,21 @@ $this->app->singleton(SmlvClient::class, fn() => new SmlvClient(
 ### Yii2
 
 ```php
-// config/web.php
+// common/config/main-local.php  ← already in .gitignore
 'components' => [
     'smlv' => [
-        'class'         => \Smlv\Sdk\Yii2\SmlvComponent::class,
-        'apiUrl'        => getenv('SMLV_API_URL'),
-        'apiKey'        => getenv('SMLV_API_KEY'),
-        'apiSecret'     => getenv('SMLV_API_SECRET'),
-        'widgetSecret'  => getenv('SMLV_WIDGET_SECRET'),
+        'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
+        'apiUrl'       => 'https://api.smlv.com',
+        'apiKey'       => 'pk_live_xxxxxxxxxxxx',
+        'apiSecret'    => 'sk_live_xxxxxxxxxxxx',
+        'widgetSecret' => 'ws_live_xxxxxxxxxxxx',
     ],
 ],
+```
+
+> `main-local.php` is generated from `environments/` and is listed in `.gitignore` by default in the Yii2 advanced template — safe for secrets.
+
+```php
 
 // In a controller/view
 echo Yii::$app->smlv->widget->generateDepositWidget(
