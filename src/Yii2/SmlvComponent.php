@@ -19,7 +19,7 @@ use Smlv\Sdk\SmlvWidgetGenerator;
  *         'apiKey' => 'your-api-key',
  *         'apiSecret' => 'your-api-secret',
  *         'apiUrl' => 'https://api.smlvcoin.com',
- *         'widgetUrl' => 'https://widget.smlvcoin.com',
+ *         'widgetUrl' => 'https://cdn.smlvcoin.com',
  *     ],
  * ],
  */
@@ -43,7 +43,7 @@ class SmlvComponent extends Component
     /**
      * @var string SMLV Widget Base URL
      */
-    public $widgetUrl = 'https://widget.smlvcoin.com';
+    public $widgetUrl = 'https://cdn.smlvcoin.com';
 
     /**
      * @var string JWT secret for widget token signing (falls back to apiSecret if not set)
