@@ -1,7 +1,8 @@
 {
 	"name": "smlv/sdk",
-	"description": "SMLV Platform SDK - Easy integration of SMLV payment system into any SaaS",
+	"description": "SMLV Platform SDK - Easy integration of SMLV payment system into any SaaS. Includes a CDN-ready JS widget (no iframe) with JWT auth.",
 	"type": "library",
+	"version": "2.0.0",
 	"license": "MIT",
 	"authors": [
 		{
@@ -29,5 +30,9 @@
 		}
 	},
 	"minimum-stability": "stable",
-	"prefer-stable": true
+	"prefer-stable": true,
+	"extra": {
+		"widget-bundle": "widget/smlv-widget.js",
+		"widget-cdn": "https://cdn.smlv.com/v2/smlv-widget.js"
+	}
 }

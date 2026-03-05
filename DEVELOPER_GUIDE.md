@@ -1,40 +1,36 @@
 # SMLV SDK Developer Guide
 
-Complete guide for integrating SMLV billing into your SaaS application.
+Complete reference for integrating SMLV billing into your SaaS application.
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
 2. [Installation](#installation)
-3. [Quick Start](#quick-start)
-4. [Framework Integration](#framework-integration)
-5. [API Reference](#api-reference)
-6. [Widget Embedding](#widget-embedding)
-7. [Webhook Handling](#webhook-handling)
-8. [Balance Checking](#balance-checking)
-9. [Advanced Usage](#advanced-usage)
+3. [Architecture Overview](#architecture-overview)
+4. [Quick Start](#quick-start)
+5. [Widget Types & Options](#widget-types--options)
+6. [Advanced Widget Usage](#advanced-widget-usage)
+7. [Framework Integration](#framework-integration)
+8. [Headless API (SmlvClient)](#headless-api-smlvclient)
+9. [Webhook Handling](#webhook-handling)
 10. [Security](#security)
 11. [Testing](#testing)
-12. [Troubleshooting](#troubleshooting)
+12. [Migration from v1.x](#migration-from-v1x)
+13. [Troubleshooting](#troubleshooting)
+
+---
 
 ## Introduction
 
-The SMLV SDK provides a drop-in billing solution for SaaS applications with **minimal integration effort**:
+SMLV SDK allows any PHP SaaS to add crypto billing with **minimal integration effort**:
 
-- **No custom UI development** - All billing UI is provided via iframe widgets
-- **Minimal code changes** - 1 database field, 1 middleware, 1 webhook endpoint
-- **Framework agnostic** - Works with Laravel, Yii2, Symfony, or plain PHP
-- **Secure** - HMAC-SHA256 signatures, JWT tokens, webhook verification
+- Pass your user's `id` and `email` to a widget generator method — done.
+- **No database changes** — no `smlv_account_reference` column.
+- **No account management code** — the widget auto-creates the account on first visit.
+- **No iframe** — widget renders as native DOM, fully styleable.
+- Full account CRUD (overview, edit, deactivate, delete) lives inside the management widget.
 
-### What You Get
-
-- 💳 Payment processing (cards, bank transfers, crypto)
-- 💰 Balance management and tracking
-- 📊 Transaction history
-- 🔔 Real-time webhooks
-- 🎨 Customizable UI widgets
-- 🔐 Secure authentication
-- 📈 Analytics dashboard (on SMLV platform)
+---
 
 ## Installation
 
@@ -44,796 +40,648 @@ The SMLV SDK provides a drop-in billing solution for SaaS applications with **mi
 composer require smlv/sdk
 ```
 
-### Manual Installation
+### Manual / local path
 
-1. Download SDK from: https://github.com/smlv/sdk
-2. Place in your project (e.g., `vendor/smlv/sdk`)
-3. Include autoloader:
-
-```php
-require_once 'vendor/smlv/sdk/src/autoload.php';
+```json
+// composer.json
+{
+    "repositories": [
+        { "type": "path", "url": "./packages/smlv-sdk" }
+    ],
+    "require": {
+        "smlv/sdk": "*"
+    }
+}
 ```
+
+```bash
+composer update smlv/sdk
+```
+
+### Requirements
+
+| Dependency | Minimum version |
+|------------|----------------|
+| PHP | 7.4 |
+| `firebase/php-jwt` | ^6.0 |
+| OpenSSL extension | any |
+
+---
+
+## Architecture Overview
+
+```
+SaaS Server                    Browser                    SMLV Platform
+──────────────                 ─────────────              ──────────────
+SmlvClient           ────────→ API requests ────────────→ /v1/api/*
+SmlvWidgetGenerator  ────────→ HTML snippet
+                               ↓
+                               <div data-smlv>  ←── smlv-widget.js (CDN)
+                               ↓
+                               POST /v1/widget/account/resolve  ──────→ SMLV
+                               (or show create-account form)
+                               ↓
+                               Render deposit / balance / transactions / management
+```
+
+### JWT flow
+
+1. Server generates a short-lived JWT (900 s, HS256) and injects it into an inline `<script>` block.
+2. The CDN JS bundle reads the token from `window._smlvQueue`, never from the URL.
+3. Every widget API call sends `Authorization: Bearer <jwt>`.
+4. The server enforces one-time use via the `jti` claim.
+
+---
 
 ## Quick Start
 
-### 1. Get API Credentials
+### 1. Set environment variables
 
-Sign up at https://dashboard.smlv.com and get your API key and secret.
+```dotenv
+SMLV_API_URL=https://api.smlv.com
+SMLV_API_KEY=pk_live_xxxxxxxxxxxx
+SMLV_API_SECRET=sk_live_xxxxxxxxxxxx
+SMLV_WIDGET_SECRET=ws_live_xxxxxxxxxxxx
+```
 
-### 2. Initialize Client
+### 2. Initialize client and generator
 
 ```php
 use Smlv\Sdk\SmlvClient;
+use Smlv\Sdk\SmlvWidgetGenerator;
 
-$client = new SmlvClient(
-    'your-api-key',
-    'your-api-secret',
-    'https://api.smlv.com'
+$smlv   = new SmlvClient(
+    getenv('SMLV_API_KEY'),
+    getenv('SMLV_API_SECRET'),
+    getenv('SMLV_API_URL'),
+    getenv('SMLV_WIDGET_SECRET')
+);
+
+$widget = new SmlvWidgetGenerator($smlv);
+```
+
+### 3. Render a widget
+
+```php
+// In your view / controller
+echo $widget->generateDepositWidget(
+    externalUserId: (string) $user->id,
+    email:          $user->email,
+    returnUrl:      'https://your-app.com/billing/success'
 );
 ```
 
-### 3. Create Account
+The output is a self-contained HTML block — no extra CSS or JS files needed in your layout.
+
+---
+
+## Widget Types & Options
+
+### Methods
 
 ```php
-$account = $client->createAccount('user@example.com', [
-    'first_name' => 'John',
-    'last_name' => 'Doe',
-    'external_id' => '12345', // Your user ID
-]);
+// Deposit: currency selector → wallet address → copy
+$html = $widget->generateDepositWidget(
+    string $externalUserId,
+    string $email,
+    string $returnUrl = '',
+    array  $options   = []
+): string;
 
-$accountReference = $account['reference'];
-// Store this in your database: users.smlv_account_reference
+// Balance: grid display + optional Sync button
+$html = $widget->generateBalanceWidget(
+    string $externalUserId,
+    string $email,
+    array  $options = []
+): string;
+
+// Transactions: paginated table (prev / next)
+$html = $widget->generateTransactionsWidget(
+    string $externalUserId,
+    string $email,
+    array  $options = []
+): string;
+
+// Management: 3-tab CRUD (Overview | Edit | Danger Zone)
+$html = $widget->generateManagementWidget(
+    string $externalUserId,
+    string $email,
+    array  $options = []
+): string;
+
+// Generic embed (type = 'deposit' | 'balance' | 'transactions' | 'management')
+$html = $widget->generateEmbed(
+    string $externalUserId,
+    string $email,
+    string $type,
+    array  $options = []
+): string;
 ```
 
-### 4. Embed Widget
+### Common options
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `theme` | `string` | `'light'` | `'light'` or `'dark'` |
+| `language` | `string` | `'en'` | UI language code |
+
+### Deposit-specific options
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `currencies` | `string[]` | Allowed currencies (empty = all) |
+| `default_currency` | `string` | Pre-selected currency |
+
+### Balance-specific options
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `show_sync` | `bool` | `true` | Show / hide Sync button |
+
+### Prefill data (passed to account creation form)
+
+```php
+$widget->generateDepositWidget($userId, $email, $returnUrl, [
+    'theme'   => 'dark',
+    'prefill' => [
+        'first_name' => $user->firstName,
+        'last_name'  => $user->lastName,
+        'phone'      => $user->phone,
+    ],
+]);
+```
+
+---
+
+## Advanced Widget Usage
+
+### JS callbacks
+
+Use `generateToken()` + manual queue push to attach JavaScript callbacks:
+
+```php
+$token = $widget->generateToken($userId, $email, 'deposit', ['theme' => 'dark']);
+```
+
+```html
+<div id="my-deposit-widget" data-smlv></div>
+
+<script src="https://cdn.smlv.com/v2/smlv-widget.js" async></script>
+<script>
+  window._smlvQueue = window._smlvQueue || [];
+  window._smlvQueue.push({
+    token:    '<?= htmlspecialchars($token) ?>',
+    selector: '#my-deposit-widget',
+    type:     'deposit',
+    options: {
+      theme: 'dark',
+      onReady:   function(instance) { console.log('Widget ready', instance); },
+      onSuccess: function(data)     { location.reload(); },
+      onError:   function(err)      { alert('Error: ' + err.message); },
+      onClose:   function()         { console.log('Widget closed'); },
+    }
+  });
+</script>
+```
+
+### Separate script tag + init snippet
+
+Place the CDN `<script>` in `<head>` and the init snippet at the widget location:
+
+```php
+// In <head>:
+echo $widget->buildScriptTag();         // <script async src="...">
+// or:
+echo $widget->buildScriptTag(defer: true); // <script defer src="...">
+
+// At widget location:
+echo $widget->generateInitSnippet(
+    externalUserId: $userId,
+    email:          $email,
+    widgetType:     'balance',
+    options:        ['theme' => 'dark'],
+    selector:       '#my-balance'
+);
+```
+
+This is useful when loading multiple widgets on the same page — include the CDN script once and place multiple init snippets.
+
+### Multiple widgets on one page
+
+```php
+// <head> — one CDN script
+echo $widget->buildScriptTag();
+
+// Widget 1
+echo '<div id="widget-balance" data-smlv></div>';
+echo $widget->generateInitSnippet($userId, $email, 'balance', [], '#widget-balance');
+
+// Widget 2
+echo '<div id="widget-txns" data-smlv></div>';
+echo $widget->generateInitSnippet($userId, $email, 'transactions', [], '#widget-txns');
+```
+
+---
+
+## Framework Integration
+
+### Laravel
+
+**Service binding:**
+
+```php
+// app/Providers/AppServiceProvider.php
+use Smlv\Sdk\SmlvClient;
+use Smlv\Sdk\SmlvWidgetGenerator;
+
+public function register(): void
+{
+    $this->app->singleton(SmlvClient::class, fn() => new SmlvClient(
+        config('services.smlv.api_key'),
+        config('services.smlv.api_secret'),
+        config('services.smlv.api_url'),
+        config('services.smlv.widget_secret'),
+    ));
+
+    $this->app->singleton(SmlvWidgetGenerator::class,
+        fn($app) => new SmlvWidgetGenerator($app->make(SmlvClient::class))
+    );
+}
+```
+
+**Config:**
+
+```php
+// config/services.php
+'smlv' => [
+    'api_url'       => env('SMLV_API_URL'),
+    'api_key'       => env('SMLV_API_KEY'),
+    'api_secret'    => env('SMLV_API_SECRET'),
+    'widget_secret' => env('SMLV_WIDGET_SECRET'),
+],
+```
+
+**Controller:**
+
+```php
+use Smlv\Sdk\SmlvWidgetGenerator;
+use Illuminate\Http\Request;
+
+class BillingController extends Controller
+{
+    public function index(Request $request, SmlvWidgetGenerator $widget)
+    {
+        $user = $request->user();
+
+        return view('billing.index', [
+            'deposit' => $widget->generateDepositWidget(
+                (string) $user->id,
+                $user->email,
+                route('billing.success')
+            ),
+        ]);
+    }
+}
+```
+
+**Webhook route:**
+
+```php
+// routes/api.php
+Route::post('/webhooks/smlv', [WebhookController::class, 'handle'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+```
+
+---
+
+### Yii2
+
+**Component:**
+
+```php
+// common/config/main.php
+'components' => [
+    'smlv' => [
+        'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
+        'apiUrl'       => getenv('SMLV_API_URL'),
+        'apiKey'       => getenv('SMLV_API_KEY'),
+        'apiSecret'    => getenv('SMLV_API_SECRET'),
+        'widgetSecret' => getenv('SMLV_WIDGET_SECRET'),
+    ],
+],
+```
+
+**Usage:**
 
 ```php
 use Smlv\Sdk\SmlvWidgetGenerator;
 
-$widgetGenerator = new SmlvWidgetGenerator($client);
+$widget = new SmlvWidgetGenerator(Yii::$app->smlv->getClient());
 
-// Show deposit form
-echo $widgetGenerator->generateDepositWidget(
-    $accountReference,
-    'https://your-app.com/billing/success'
+echo $widget->generateManagementWidget(
+    (string) Yii::$app->user->id,
+    Yii::$app->user->identity->email
 );
 ```
 
-### 5. Check Balance
-
-```php
-use Smlv\Sdk\SmlvBalanceChecker;
-
-$balanceChecker = new SmlvBalanceChecker($client);
-
-if ($balanceChecker->hasBalance($accountReference)) {
-    // Allow user access
-} else {
-    // Redirect to billing
-}
-```
-
-## Framework Integration
-
-### Yii2
-
-#### 1. Configure Component
-
-`common/config/main.php`:
-
-```php
-return [
-    'components' => [
-        'smlv' => [
-            'class' => 'Smlv\Sdk\Yii2\SmlvComponent',
-            'apiKey' => getenv('SMLV_API_KEY'),
-            'apiSecret' => getenv('SMLV_API_SECRET'),
-        ],
-    ],
-];
-```
-
-#### 2. Add Balance Filter
-
-```php
-use Smlv\Sdk\Yii2\SmlvBalanceFilter;
-
-public function behaviors()
-{
-    return [
-        'smlvBalance' => [
-            'class' => SmlvBalanceFilter::class,
-            'balanceChecker' => fn() => Yii::$app->smlv->getBalanceChecker(),
-            'accountReferenceCallback' => fn() => Yii::$app->user->identity->smlv_account_reference,
-            'only' => ['create', 'update', 'delete'],
-            'redirectUrl' => ['/billing/deposit'],
-        ],
-    ];
-}
-```
-
-#### 3. Embed Widget in View
-
-```php
-$widgetGenerator = Yii::$app->smlv->getWidgetGenerator();
-echo $widgetGenerator->generateBalanceWidget(
-    Yii::$app->user->identity->smlv_account_reference
-);
-```
-
-### Laravel
-
-#### 1. Configure Service
-
-`config/services.php`:
-
-```php
-return [
-    'smlv' => [
-        'api_key' => env('SMLV_API_KEY'),
-        'api_secret' => env('SMLV_API_SECRET'),
-        'api_url' => env('SMLV_API_URL', 'https://api.smlv.com'),
-    ],
-];
-```
-
-`app/Providers/AppServiceProvider.php`:
-
-```php
-use Smlv\Sdk\SmlvClient;
-use Smlv\Sdk\SmlvBalanceChecker;
-
-public function register()
-{
-    $this->app->singleton(SmlvClient::class, function ($app) {
-        return new SmlvClient(
-            config('services.smlv.api_key'),
-            config('services.smlv.api_secret'),
-            config('services.smlv.api_url')
-        );
-    });
-
-    $this->app->singleton(SmlvBalanceChecker::class, function ($app) {
-        return new SmlvBalanceChecker($app->make(SmlvClient::class));
-    });
-}
-```
-
-#### 2. Apply Middleware
-
-`app/Http/Kernel.php`:
-
-```php
-protected $routeMiddleware = [
-    'smlv.balance' => \Smlv\Sdk\Laravel\SmlvBalanceMiddleware::class,
-];
-```
-
-`routes/web.php`:
-
-```php
-Route::middleware(['auth', 'smlv.balance:0.0,smlv_account_reference'])->group(function () {
-    Route::post('/posts', [PostController::class, 'store']);
-    Route::put('/posts/{id}', [PostController::class, 'update']);
-});
-```
-
-#### 3. Embed Widget in Blade
-
-```blade
-@inject('widgetGenerator', 'Smlv\Sdk\SmlvWidgetGenerator')
-
-{!! $widgetGenerator->generateDepositWidget(
-    auth()->user()->smlv_account_reference,
-    route('billing.success')
-) !!}
-```
+---
 
 ### Symfony
 
-#### 1. Configure Service
-
-`config/services.yaml`:
+**Services config:**
 
 ```yaml
+# config/services.yaml
 parameters:
-    smlv.api_key: '%env(SMLV_API_KEY)%'
-    smlv.api_secret: '%env(SMLV_API_SECRET)%'
+    smlv.api_url:       '%env(SMLV_API_URL)%'
+    smlv.api_key:       '%env(SMLV_API_KEY)%'
+    smlv.api_secret:    '%env(SMLV_API_SECRET)%'
+    smlv.widget_secret: '%env(SMLV_WIDGET_SECRET)%'
 
 services:
     Smlv\Sdk\SmlvClient:
         arguments:
-            $apiKey: '%smlv.api_key%'
-            $apiSecret: '%smlv.api_secret%'
-            $apiUrl: 'https://api.smlv.com'
-
-    Smlv\Sdk\SmlvBalanceChecker:
-        arguments:
-            $client: '@Smlv\Sdk\SmlvClient'
+            $apiKey:       '%smlv.api_key%'
+            $apiSecret:    '%smlv.api_secret%'
+            $apiUrl:       '%smlv.api_url%'
+            $widgetSecret: '%smlv.widget_secret%'
 
     Smlv\Sdk\SmlvWidgetGenerator:
         arguments:
             $client: '@Smlv\Sdk\SmlvClient'
 ```
 
-#### 2. Create Event Subscriber
+---
+
+### Plain PHP
 
 ```php
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+require_once __DIR__ . '/vendor/autoload.php';
 
-class SmlvBalanceSubscriber implements EventSubscriberInterface
-{
-    private $balanceChecker;
+use Smlv\Sdk\SmlvClient;
+use Smlv\Sdk\SmlvWidgetGenerator;
 
-    public static function getSubscribedEvents()
-    {
-        return [RequestEvent::class => 'onKernelRequest'];
-    }
+$smlv   = new SmlvClient($_ENV['SMLV_API_KEY'], $_ENV['SMLV_API_SECRET'], $_ENV['SMLV_API_URL'], $_ENV['SMLV_WIDGET_SECRET']);
+$widget = new SmlvWidgetGenerator($smlv);
 
-    public function onKernelRequest(RequestEvent $event)
-    {
-        // Check balance for specific routes
-        if ($this->requiresBalance($event->getRequest())) {
-            $user = $this->security->getUser();
-            if (!$this->balanceChecker->hasBalance($user->getSmlvAccountReference())) {
-                throw new AccessDeniedHttpException('Insufficient balance');
-            }
-        }
-    }
-}
+echo $widget->generateBalanceWidget($userId, $email);
 ```
 
-## API Reference
+---
 
-### SmlvClient
+## Headless API (SmlvClient)
 
-Main API client for interacting with SMLV platform.
+For server-side operations: background jobs, admin panels, reporting.
 
-#### Account Management
+### Account management
 
 ```php
 // Create account
-$account = $client->createAccount(
-    'user@example.com',
-    [
-        'first_name' => 'John',
-        'last_name' => 'Doe',
-        'phone' => '+1234567890',
-        'external_id' => '12345',
-    ]
-);
-
-// Get account
-$account = $client->getAccount($accountReference);
-
-// Update account
-$client->updateAccount($accountReference, [
-    'first_name' => 'Jane',
+$account = $smlv->createAccount($email, [
+    'first_name'  => 'John',
+    'last_name'   => 'Doe',
+    'external_id' => '42',   // your user ID
 ]);
+$ref = $account['data']['account_reference'];
 
-// Close account
-$client->closeAccount($accountReference, 'User requested closure');
+// Read
+$account = $smlv->getAccount($ref);
 
-// Reactivate account
-$client->reactivateAccount($accountReference);
+// Update
+$smlv->updateAccount($ref, ['last_name' => 'Smith']);
 
-// Find account by email
-$account = $client->findAccountByEmail('user@example.com');
+// Close (soft-delete)
+$smlv->closeAccount($ref);
+
+// Restore
+$smlv->reactivateAccount($ref);
+
+// Lookup by e-mail
+$account = $smlv->findAccountByEmail('user@example.com');
 ```
 
-#### Balance Operations
+### Balance
 
 ```php
-// Get balance
-$balance = $client->getBalance($accountReference);
-
-// Sync balance (force refresh from SMLV)
-$balance = $client->syncBalance($accountReference);
+$balance = $smlv->getBalance($ref);     // Returns balance data
+$smlv->syncBalance($ref);               // Force sync from blockchain
 ```
 
-#### Transaction Management
+### Transactions
 
 ```php
-// Create transaction (debit/credit)
-$transaction = $client->createTransaction($accountReference, [
-    'type' => 'debit', // or 'credit'
-    'amount' => 10.00,
-    'description' => 'Monthly subscription',
-    'metadata' => ['subscription_id' => 123],
+// Create outbound transaction
+$smlv->createTransaction($ref, [
+    'amount'      => 25.00,
+    'currency'    => 'USDT',
+    'description' => 'Subscription fee',
 ]);
 
-// Get transactions
-$transactions = $client->getTransactions($accountReference, [
-    'limit' => 10,
-    'offset' => 0,
-    'from' => '2024-01-01',
-    'to' => '2024-12-31',
+// List with pagination
+$result = $smlv->getTransactions($ref, [
+    'page'     => 1,
+    'per_page' => 20,
+    'type'     => 'debit',
 ]);
 ```
 
-#### Widget Authentication
+### JWT token only (custom widget init)
 
 ```php
-// Generate JWT token for widget
-$token = $client->generateWidgetToken(
-    $accountReference,
-    'deposit',
-    'https://your-app.com/return',
-    ['theme' => 'dark']
+$token = $smlv->generateWidgetToken(
+    externalUserId: $userId,
+    email:          $email,
+    widgetType:     'deposit',
+    returnUrl:      'https://your-app.com/success',
+    options:        ['theme' => 'dark'],
+    prefill:        ['first_name' => 'John']
 );
 ```
 
-### SmlvBalanceChecker
-
-Helper class for balance checking with caching.
-
-```php
-use Smlv\Sdk\SmlvBalanceChecker;
-
-$checker = new SmlvBalanceChecker($client, [
-    'cache_ttl' => 300, // Cache for 5 minutes
-]);
-
-// Check if has any balance
-$hasBalance = $checker->hasBalance($accountReference);
-
-// Get current balance (cached)
-$balance = $checker->getBalance($accountReference);
-
-// Check if can afford specific amount
-$canAfford = $checker->canAfford($accountReference, 10.00);
-
-// Deduct balance
-$checker->deductBalance($accountReference, 9.99, [
-    'description' => 'Subscription payment',
-]);
-
-// Add balance
-$checker->addBalance($accountReference, 5.00, [
-    'description' => 'Refund',
-]);
-
-// Sync balance (bypass cache)
-$balance = $checker->syncBalance($accountReference);
-
-// Clear cache
-$checker->clearCache($accountReference);
-```
-
-### SmlvWidgetGenerator
-
-Generate HTML for embedding SMLV widgets.
-
-```php
-use Smlv\Sdk\SmlvWidgetGenerator;
-
-$generator = new SmlvWidgetGenerator($client, 'https://widget.smlv.com');
-
-// Deposit widget (payment form)
-$html = $generator->generateDepositWidget(
-    $accountReference,
-    'https://your-app.com/return',
-    [
-        'width' => '600px',
-        'height' => '500px',
-        'theme' => 'light', // or 'dark'
-        'language' => 'en',
-        'responsive' => false,
-    ]
-);
-
-// Balance widget (compact display)
-$html = $generator->generateBalanceWidget($accountReference, [
-    'width' => '400px',
-    'height' => '200px',
-]);
-
-// Transactions widget (history)
-$html = $generator->generateTransactionsWidget($accountReference, [
-    'width' => '800px',
-    'height' => '600px',
-]);
-
-// Management widget (account settings)
-$html = $generator->generateManagementWidget($accountReference, [
-    'width' => '700px',
-    'height' => '400px',
-]);
-
-// Get widget URL (for direct link)
-$url = $generator->generateWidgetUrl(
-    $accountReference,
-    'deposit',
-    'https://your-app.com/return'
-);
-```
-
-### SmlvWebhookHandler
-
-Handle incoming webhooks from SMLV platform.
-
-```php
-use Smlv\Sdk\SmlvWebhookHandler;
-
-$handler = new SmlvWebhookHandler($apiSecret);
-
-// Get webhook data
-$payload = file_get_contents('php://input');
-$signature = $_SERVER['HTTP_X_SMLV_SIGNATURE'];
-$timestamp = $_SERVER['HTTP_X_SMLV_TIMESTAMP'];
-
-// Verify and parse
-$data = $handler->handle($payload, $signature, $timestamp);
-
-// Process event
-switch ($data['event']) {
-    case 'account.created':
-        // Handle account creation
-        break;
-    case 'balance.updated':
-        // Handle balance update
-        break;
-    case 'transaction.completed':
-        // Handle transaction completion
-        break;
-}
-```
-
-## Widget Embedding
-
-### Widget Types
-
-1. **Deposit Widget** - Payment form with multiple payment methods
-2. **Balance Widget** - Compact balance display
-3. **Transactions Widget** - Full transaction history
-4. **Management Widget** - Account settings and management
-
-### Widget Options
-
-```php
-$options = [
-    'width' => '600px',        // Widget width
-    'height' => '500px',       // Widget height
-    'theme' => 'light',        // 'light' or 'dark'
-    'language' => 'en',        // Widget language (en, es, fr, etc.)
-    'responsive' => false,     // Wrap in responsive container
-    'border_radius' => '8px',  // Custom border radius
-];
-```
-
-### Responsive Widgets
-
-```php
-// Automatically adjust to container size
-$html = $generator->generateDepositWidget($accountReference, $returnUrl, [
-    'responsive' => true,
-]);
-```
-
-### Custom Styling
-
-```html
-<style>
-	.smlv-widget {
-		border: 1px solid #ddd;
-		border-radius: 8px;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-	}
-
-	.smlv-widget-responsive {
-		max-width: 800px;
-		margin: 0 auto;
-	}
-</style>
-```
+---
 
 ## Webhook Handling
 
-### Webhook Events
-
-- `account.created` - New account created
-- `account.updated` - Account information updated
-- `account.closed` - Account closed
-- `balance.updated` - Balance changed
-- `transaction.pending` - Transaction initiated
-- `transaction.completed` - Transaction successful
-- `transaction.failed` - Transaction failed
-- `transaction.reversed` - Transaction reversed/refunded
-
-### Event Payload Structure
-
-```json
-{
-	"event": "balance.updated",
-	"timestamp": 1234567890,
-	"data": {
-		"reference": "acc_abc123",
-		"balance": 50.0,
-		"previous_balance": 40.0
-	}
-}
-```
-
-### Webhook Security
-
-Webhooks are signed with HMAC-SHA256:
-
-```
-X-SMLV-Signature: sha256=abc123...
-X-SMLV-Timestamp: 1234567890
-```
-
-The SDK automatically verifies signatures and rejects replayed requests (>5 min old).
-
-### Example Webhook Handler
+### Setup
 
 ```php
 use Smlv\Sdk\SmlvWebhookHandler;
-use Smlv\Sdk\Exceptions\SmlvException;
+
+$handler = new SmlvWebhookHandler($smlv);
 
 try {
-    $handler = new SmlvWebhookHandler($apiSecret);
-    $data = $handler->handle(
-        file_get_contents('php://input'),
-        $_SERVER['HTTP_X_SMLV_SIGNATURE'],
-        $_SERVER['HTTP_X_SMLV_TIMESTAMP']
+    $event = $handler->handle(
+        payload:   json_decode(file_get_contents('php://input'), true),
+        signature: $_SERVER['HTTP_X_SMLV_SIGNATURE'] ?? ''
     );
 
     // Process event
-    processWebhookEvent($data);
+    match ($event['type']) {
+        'balance.updated'       => handleBalanceUpdated($event),
+        'transaction.completed' => handleTxCompleted($event),
+        'account.closed'        => handleAccountClosed($event),
+        default                 => null,
+    };
 
     http_response_code(200);
-    echo json_encode(['status' => 'success']);
-
-} catch (SmlvException $e) {
+    echo json_encode(['ok' => true]);
+} catch (\Smlv\Sdk\Exceptions\SmlvAuthException $e) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Invalid signature']);
+} catch (\Exception $e) {
     http_response_code(400);
     echo json_encode(['error' => $e->getMessage()]);
 }
 ```
 
-## Balance Checking
-
-### Middleware Pattern
-
-Protect routes/actions that require balance:
-
-```php
-// Before action
-if (!$balanceChecker->hasBalance($accountReference)) {
-    return redirect('/billing/deposit');
-}
-
-// Check minimum amount
-if (!$balanceChecker->canAfford($accountReference, 10.00)) {
-    return error('Insufficient balance. Minimum $10.00 required.');
-}
-```
-
-### Caching
-
-Balance is cached in-memory to reduce API calls:
-
-```php
-$checker = new SmlvBalanceChecker($client, [
-    'cache_ttl' => 300, // Cache for 5 minutes
-]);
-
-// First call hits API
-$balance1 = $checker->getBalance($accountReference);
-
-// Second call uses cache (within 5 min)
-$balance2 = $checker->getBalance($accountReference);
-
-// Force refresh
-$balance3 = $checker->syncBalance($accountReference);
-```
-
-Cache is automatically cleared after transactions:
-
-```php
-// This clears cache automatically
-$checker->deductBalance($accountReference, 10.00);
-```
-
-## Advanced Usage
-
-### Error Handling
-
-```php
-use Smlv\Sdk\Exceptions\SmlvException;
-use Smlv\Sdk\Exceptions\SmlvApiException;
-use Smlv\Sdk\Exceptions\SmlvAuthException;
-use Smlv\Sdk\Exceptions\SmlvValidationException;
-
-try {
-    $account = $client->createAccount($email);
-} catch (SmlvValidationException $e) {
-    // Invalid input data
-    echo "Validation error: " . $e->getMessage();
-} catch (SmlvAuthException $e) {
-    // Invalid API credentials
-    echo "Auth error: " . $e->getMessage();
-} catch (SmlvApiException $e) {
-    // API returned error
-    echo "API error: " . $e->getMessage();
-} catch (SmlvException $e) {
-    // General SDK error
-    echo "Error: " . $e->getMessage();
-}
-```
-
-### Custom HTTP Client
-
-```php
-// Override HTTP client for testing or custom behavior
-class MyHttpClient extends \Smlv\Sdk\SmlvClient {
-    protected function makeRequest($method, $endpoint, $data = []) {
-        // Custom HTTP logic
-    }
-}
-```
-
-### Transaction Metadata
-
-Store custom data with transactions:
-
-```php
-$checker->deductBalance($accountReference, 9.99, [
-    'description' => 'Premium subscription',
-    'metadata' => [
-        'subscription_id' => 123,
-        'plan' => 'premium',
-        'billing_cycle' => 'monthly',
-    ],
-]);
-```
-
-## Security
-
-### API Authentication
-
-All API requests are signed with HMAC-SHA256:
-
-```
-X-API-Key: your-api-key
-X-Signature: sha256=abc123...
-X-Timestamp: 1234567890
-```
-
-### Widget Authentication
-
-Widgets use JWT tokens with expiration:
-
-```php
-$token = $client->generateWidgetToken(
-    $accountReference,
-    'deposit',
-    $returnUrl,
-    ['exp' => time() + 3600] // 1 hour expiration
-);
-```
-
-### Webhook Verification
-
-Webhooks must be verified:
-
-```php
-$handler->verify($payload, $signature, $timestamp);
-// Throws SmlvAuthException if invalid
-```
-
-### Best Practices
-
-1. **Never expose API secret** - Keep it in environment variables
-2. **Verify all webhooks** - Always use signature verification
-3. **Use HTTPS** - All API calls must use HTTPS
-4. **Validate input** - Sanitize user input before API calls
-5. **Handle errors** - Always catch and handle exceptions
-6. **Cache balances** - Use caching to reduce API calls
-7. **Log webhooks** - Keep audit trail of webhook events
-
-## Testing
-
-### Test Mode
-
-SMLV provides test API credentials:
-
-```php
-$client = new SmlvClient(
-    'test_key_abc123',
-    'test_secret_xyz789',
-    'https://api-sandbox.smlv.com'
-);
-```
-
-### Mock Webhooks
-
-Test webhook handling locally:
-
-```bash
-curl -X POST http://localhost/webhook \
-  -H "Content-Type: application/json" \
-  -H "X-SMLV-Signature: sha256=..." \
-  -H "X-SMLV-Timestamp: 1234567890" \
-  -d '{"event":"balance.updated","data":{...}}'
-```
-
-### Unit Tests
-
-```php
-use PHPUnit\Framework\TestCase;
-use Smlv\Sdk\SmlvClient;
-
-class SmlvIntegrationTest extends TestCase
-{
-    public function testCreateAccount()
-    {
-        $client = new SmlvClient('test_key', 'test_secret', 'https://api-sandbox.smlv.com');
-        $account = $client->createAccount('test@example.com');
-
-        $this->assertNotEmpty($account['reference']);
-        $this->assertEquals('test@example.com', $account['email']);
-    }
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**"Invalid signature" error**
-
-- Check that API secret is correct
-- Ensure timestamp is within 5 minutes
-- Verify payload hasn't been modified
-
-**"Account not found" error**
-
-- Check that account reference is stored correctly
-- Ensure account wasn't closed or deleted
-- Try searching by email with `findAccountByEmail()`
-
-**Widget not loading**
-
-- Check JWT token is valid and not expired
-- Ensure widget URL is accessible
-- Check browser console for CORS errors
-
-**Balance always zero**
-
-- Check that webhooks are configured correctly
-- Manually sync balance with `syncBalance()`
-- Verify transactions completed successfully
-
-### Debug Mode
-
-Enable logging for debugging:
-
-```php
-$client = new SmlvClient($apiKey, $apiSecret);
-$client->setDebug(true); // Logs all API requests
-
-// Now all requests are logged
-$account = $client->getAccount($reference);
-```
-
-### Support
-
-- **Documentation**: https://docs.smlv.com
-- **Email**: support@smlv.com
-- **GitHub**: https://github.com/smlv/sdk
-- **Status**: https://status.smlv.com
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Contributing
-
-Contributions welcome! Please submit pull requests to https://github.com/smlv/sdk
+### Event reference
+
+| Event type | Key payload fields |
+|------------|-------------------|
+| `account.created` | `account_reference`, `status` |
+| `account.updated` | `account_reference`, `changes` |
+| `account.closed` | `account_reference` |
+| `account.reactivated` | `account_reference` |
+| `balance.updated` | `account_reference`, `old_balance`, `new_balance`, `currency` |
+| `transaction.pending` | `transaction_id`, `amount`, `currency`, `type` |
+| `transaction.completed` | `transaction_id`, `amount`, `currency`, `type`, `balance` |
+| `transaction.failed` | `transaction_id`, `error`, `error_code` |
+
+### Retry policy
+
+SMLV retries failed webhook deliveries with exponential back-off: 1 min → 5 min → 30 min → 2 h → 24 h.  
+Always respond with HTTP 200 within 10 s; process asynchronously for long jobs.
 
 ---
 
-**Happy coding! 🚀**
+## Security
+
+### Request signing
+
+Every `SmlvClient` API call is signed with HMAC-SHA256:
+
+```
+X-API-Key:   <api_key>
+X-Timestamp: <unix_timestamp>
+X-Signature: HMAC-SHA256(api_secret, "api_key\ntimestamp\nbody")
+```
+
+### Widget JWT
+
+```json
+{
+  "external_user_id": "42",
+  "email":            "user@example.com",
+  "widget_type":      "deposit",
+  "return_url":       "https://your-app.com/success",
+  "options":          {},
+  "prefill":          {},
+  "iat":              1717000000,
+  "exp":              1717000900,
+  "jti":              "uuid-v4"
+}
+```
+
+- TTL: **900 seconds** (15 minutes)
+- `jti`: server enforces single-use — replay attack prevention
+- Token injected into inline `<script>` — **never** in a URL parameter
+
+### Webhook signatures
+
+```
+X-Smlv-Signature: HMAC-SHA256(webhook_secret, raw_body)
+```
+
+`SmlvWebhookHandler::handle()` verifies this automatically.
+
+### Checklist
+
+- [ ] Store secrets in environment variables, never in code
+- [ ] Use HTTPS for all endpoints and webhook URLs
+- [ ] Validate JWT TTL — generate it immediately before rendering the view
+- [ ] Rotate API keys via the SMLV dashboard if compromised
+
+---
+
+## Testing
+
+```bash
+cd packages/smlv-sdk
+composer install
+composer test
+```
+
+For unit tests using a mock client:
+
+```php
+use Smlv\Sdk\SmlvClient;
+
+$mockClient = $this->createMock(SmlvClient::class);
+$mockClient->method('generateWidgetToken')->willReturn('eyJ...');
+
+$widget = new SmlvWidgetGenerator($mockClient);
+$html   = $widget->generateBalanceWidget('42', 'test@example.com');
+
+$this->assertStringContainsString('data-smlv', $html);
+$this->assertStringContainsString('smlv-widget.js', $html);
+```
+
+---
+
+## Migration from v1.x
+
+### What changed
+
+| v1.x | v2.0 |
+|------|------|
+| `generateDepositWidget($accountReference, $returnUrl)` | `generateDepositWidget($externalUserId, $email, $returnUrl)` |
+| Rendered `<iframe src="...?token=...">` | Renders `<div>` + CDN `<script>` + inline init |
+| Token in URL query string | Token in inline `<script>` block |
+| Required `smlv_account_reference` DB column | No DB column needed |
+| SaaS called `createAccount()` on registration | Widget auto-creates account on first visit |
+| Management widget was read-only | Full CRUD (edit / deactivate / delete) |
+
+### Migration steps
+
+1. **Update composer**: change `"smlv/sdk": "^1.0"` → `"^2.0"`, run `composer update`.
+2. **Update widget calls**: replace `$accountReference` with `$user->id, $user->email`.
+3. **Remove `createAccount()` calls** from your registration flow — optional now (widget handles it).
+4. **Remove `smlv_account_reference` column** from your DB migration once all accounts are resolved via the widget. (Existing data is not affected — the widget will resolve accounts by `external_id + email`.)
+5. **Update your layout**: the widget no longer needs a sandboxed iframe context.
+
+---
+
+## Troubleshooting
+
+### Widget doesn't load
+
+- Check browser console for errors
+- Verify CDN URL is reachable: `https://cdn.smlv.com/v2/smlv-widget.js`
+- Ensure the `<div data-smlv>` is in the DOM before the init script runs (or use `async` loading queue)
+
+### "Invalid token" error in widget
+
+- Check that `SMLV_WIDGET_SECRET` matches the secret configured in SMLV dashboard
+- Check server clock — JWT `iat`/`exp` are time-sensitive; time skew > 5 min will fail
+- Token TTL is 900 s — don't cache the HTML output; generate per-request
+
+### Account creation form appears every time
+
+- The widget resolves the account via `external_user_id + email`
+- If `externalUserId` changes between requests (e.g. casted differently), a new account will be created
+- Always pass the same stable string for the same user: `(string) $user->id` or `"user_{$user->id}"`
+
+### Webhook signature mismatch
+
+- Verify you're using the raw request body for HMAC computation (not parsed/re-encoded)
+- Ensure `SMLV_WIDGET_SECRET` vs `SMLV_API_SECRET` are not swapped — webhooks use `webhook_secret`
+
+### Proxy / CDN caching issues
+
+- The generated HTML contains a unique `jti`-linked token — do not cache it at the HTTP layer
+- Set `Cache-Control: no-store` or `private` on billing pages
+
+---
+
+For the complete API surface, see [README.md](README.md).  
+For a full working example, see [INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md).

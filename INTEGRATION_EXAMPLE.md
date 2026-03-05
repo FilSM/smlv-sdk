@@ -1,247 +1,234 @@
-# SMLV Integration Example for eGram
+# Integration Example
 
-This guide demonstrates the minimal integration required to add SMLV billing to your eGram application.
+A complete working example of SMLV SDK integration into a PHP SaaS application.
 
-## Overview
+## Tech stack
 
-The SMLV SDK provides a drop-in solution for billing management with **minimal code changes**:
+- **Framework**: Yii2 (same pattern applies to Laravel / Symfony)
+- **DB**: PostgreSQL / MySQL — standard `users` table, **no extra columns needed**
 
-- **1 database field**: `smlv_account_reference`
-- **1 middleware**: `SmlvBalanceFilter` for access control
-- **1 webhook endpoint**: `/smlv/webhook`
-- **1 widget embed**: Iframe widgets for UI
+---
 
-## Step 1: Install SDK
-
-Add the SDK to your project:
+## Step 1 — Install
 
 ```bash
-cd e:\!WWW\eGram
 composer require smlv/sdk
 ```
 
-Or add to `composer.json`:
+## Step 2 — Configure environment
 
-```json
-{
-	"repositories": [
-		{
-			"type": "path",
-			"url": "./packages/smlv-sdk"
-		}
-	],
-	"require": {
-		"smlv/sdk": "*"
-	}
-}
+```dotenv
+# .env
+SMLV_API_URL=https://api.smlv.com
+SMLV_API_KEY=pk_live_xxxxxxxxxxxx
+SMLV_API_SECRET=sk_live_xxxxxxxxxxxx
+SMLV_WIDGET_SECRET=ws_live_xxxxxxxxxxxx
 ```
 
-Then run:
-
-```bash
-composer update smlv/sdk
-```
-
-## Step 2: Run Migration
-
-Add the `smlv_account_reference` field to your users table:
-
-```bash
-php yii migrate/up --migrationPath=@console/migrations
-```
-
-This will run the migration: `m260305_120000_add_smlv_account_reference_to_abonent`
-
-## Step 3: Configure SMLV Component
-
-Add the SMLV component to your `common/config/main.php`:
+## Step 3 — Register SMLV component (Yii2)
 
 ```php
+// common/config/main.php
 return [
     'components' => [
         'smlv' => [
-            'class' => 'Smlv\Sdk\Yii2\SmlvComponent',
-            'apiKey' => 'your-api-key-here',
-            'apiSecret' => 'your-api-secret-here',
-            'apiUrl' => 'https://api.smlv.com',
-            'widgetUrl' => 'https://widget.smlv.com',
-            'balanceCacheTtl' => 300, // Cache balance for 5 minutes
+            'class' => \Smlv\Sdk\Yii2\SmlvComponent::class,
+            'apiUrl'       => getenv('SMLV_API_URL'),
+            'apiKey'       => getenv('SMLV_API_KEY'),
+            'apiSecret'    => getenv('SMLV_API_SECRET'),
+            'widgetSecret' => getenv('SMLV_WIDGET_SECRET'),
         ],
     ],
 ];
 ```
 
-**Get your API credentials from SMLV platform**: https://dashboard.smlv.com/settings/api
-
-## Step 4: Add Webhook Endpoint
-
-The webhook controller is already created at `backend/controllers/SmlvController.php`.
-
-Add the route to your `backend/config/main.php`:
+## Step 4 — Billing page controller
 
 ```php
-return [
-    'components' => [
-        'urlManager' => [
-            'rules' => [
-                'smlv/webhook' => 'smlv/webhook',
-            ],
-        ],
-    ],
-];
-```
+// frontend/controllers/BillingController.php
+namespace frontend\controllers;
 
-**Configure webhook URL in SMLV dashboard**: `https://your-domain.com/backend/web/smlv/webhook`
-
-## Step 5: Add Balance Filter to Controllers
-
-Apply the balance filter to controllers that require payment:
-
-```php
-<?php
-
-namespace backend\controllers;
-
-use Yii;
+use Smlv\Sdk\SmlvWidgetGenerator;
 use yii\web\Controller;
-use Smlv\Sdk\Yii2\SmlvBalanceFilter;
+use Yii;
 
-class PostController extends Controller
+class BillingController extends Controller
 {
-    public function behaviors()
+    public function actionIndex(): string
     {
-        return [
-            'smlvBalance' => [
-                'class' => SmlvBalanceFilter::class,
-                'balanceChecker' => function() {
-                    return Yii::$app->smlv->getBalanceChecker();
-                },
-                'accountReferenceCallback' => function() {
-                    return Yii::$app->user->identity->smlv_account_reference;
-                },
-                'only' => ['create', 'update', 'delete'], // Actions requiring balance
-                'minBalance' => 0.0, // Require any balance > 0
-                'errorMessage' => 'Insufficient balance. Please deposit funds to continue.',
-                'redirectUrl' => ['/billing/smlv-example'], // Redirect to billing page
-            ],
-        ];
+        /** @var \Smlv\Sdk\SmlvClient $smlv */
+        $smlv   = Yii::$app->smlv->getClient();
+        $widget = new SmlvWidgetGenerator($smlv);
+
+        $user = Yii::$app->user->identity;
+
+        return $this->render('index', [
+            'depositWidget'      => $widget->generateDepositWidget(
+                (string) $user->id,
+                $user->email,
+                Yii::$app->urlManager->createAbsoluteUrl(['/billing/success'])
+            ),
+            'balanceWidget'      => $widget->generateBalanceWidget(
+                (string) $user->id,
+                $user->email
+            ),
+            'transactionsWidget' => $widget->generateTransactionsWidget(
+                (string) $user->id,
+                $user->email
+            ),
+        ]);
     }
 
-    // Your action methods...
+    public function actionSuccess(): string
+    {
+        return $this->render('success');
+    }
 }
 ```
 
-## Step 6: Embed Widgets in Views
-
-Use the widget generator to embed SMLV UI in your views:
+## Step 5 — Billing view
 
 ```php
+<!-- frontend/views/billing/index.php -->
 <?php
+/** @var string $depositWidget */
+/** @var string $balanceWidget */
+/** @var string $transactionsWidget */
+?>
 
-$user = Yii::$app->user->identity;
+<div class="billing-page container">
 
-// Get or create SMLV account
-if (empty($user->smlv_account_reference)) {
-    $user->smlv_account_reference = Yii::$app->smlv->getOrCreateAccountForUser($user);
-}
+    <h1>Billing</h1>
 
-$widgetGenerator = Yii::$app->smlv->getWidgetGenerator();
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Balance</h3>
+            <?= $balanceWidget ?>
+        </div>
+        <div class="col-md-6">
+            <h3>Add Funds</h3>
+            <?= $depositWidget ?>
+        </div>
+    </div>
 
-// Balance widget (compact)
-echo $widgetGenerator->generateBalanceWidget($user->smlv_account_reference, [
-    'width' => '400px',
-    'height' => '200px',
-]);
+    <hr>
 
-// Deposit widget (payment methods)
-echo $widgetGenerator->generateDepositWidget(
-    $user->smlv_account_reference,
-    Yii::$app->urlManager->createAbsoluteUrl(['/billing/success']), // Return URL
-    [
-        'width' => '600px',
-        'height' => '500px',
-    ]
-);
+    <h3>Transaction History</h3>
+    <?= $transactionsWidget ?>
 
-// Transactions history widget
-echo $widgetGenerator->generateTransactionsWidget($user->smlv_account_reference, [
-    'width' => '800px',
-    'height' => '600px',
-]);
-
-// Account management widget
-echo $widgetGenerator->generateManagementWidget($user->smlv_account_reference, [
-    'width' => '700px',
-    'height' => '400px',
-]);
+</div>
 ```
 
-See full example in: `backend/views/billing/smlv-example.php`
+On first visit the widget will display a brief account-creation form inside the widget area — **no extra server-side code or database columns required**.
 
-## Step 7: Test Integration
-
-1. **Create test account**: Login to your application
-2. **View billing page**: Navigate to `/billing/smlv-example`
-3. **Deposit funds**: Use the deposit widget to add balance
-4. **Test access control**: Try to access protected actions with zero balance
-
-## Manual Balance Operations
-
-You can manually check and modify balances in your code:
+## Step 6 — Account management page
 
 ```php
-$balanceChecker = Yii::$app->smlv->getBalanceChecker();
+// Controller action
+public function actionManage(): string
+{
+    $smlv   = Yii::$app->smlv->getClient();
+    $widget = new SmlvWidgetGenerator($smlv);
+    $user   = Yii::$app->user->identity;
 
-// Check if user has any balance
-if ($balanceChecker->hasBalance($accountReference)) {
-    // Allow access
+    return $this->render('manage', [
+        'managementWidget' => $widget->generateManagementWidget(
+            (string) $user->id,
+            $user->email,
+            ['theme' => 'light']
+        ),
+    ]);
 }
-
-// Check if user can afford specific amount
-if ($balanceChecker->canAfford($accountReference, 10.00)) {
-    // User has at least $10
-}
-
-// Get current balance
-$balance = $balanceChecker->getBalance($accountReference);
-
-// Deduct balance (e.g., after subscription renewal)
-$balanceChecker->deductBalance($accountReference, 9.99, [
-    'description' => 'Monthly subscription',
-    'metadata' => ['subscription_id' => 123],
-]);
-
-// Add balance (e.g., promotional credit)
-$balanceChecker->addBalance($accountReference, 5.00, [
-    'description' => 'Promotional credit',
-]);
 ```
 
-## Complete Integration Checklist
+The management widget provides:
+- **Overview tab** — read-only account snapshot
+- **Edit tab** — update profile fields via PATCH `/account`
+- **Danger Zone tab** — deactivate or permanently delete account
 
-- [ ] Install SDK package
-- [ ] Run migration to add `smlv_account_reference` field
-- [ ] Configure SMLV component with API credentials
-- [ ] Add webhook endpoint and configure URL in SMLV dashboard
-- [ ] Add balance filter to controllers requiring payment
-- [ ] Embed widgets in views for deposit/balance/history
-- [ ] Test account creation and balance operations
-- [ ] Configure webhook event handlers as needed
-- [ ] Set up low-balance notifications (optional)
+## Step 7 — Webhook endpoint
 
-## That's It!
+Create a controller that receives SMLV event notifications:
 
-You've successfully integrated SMLV billing with **minimal changes**:
+```php
+// backend/controllers/WebhookController.php
+namespace backend\controllers;
 
-- ✅ 1 field added to database
-- ✅ 1 middleware applied to controllers
-- ✅ 1 webhook endpoint configured
-- ✅ Widgets embedded in views
+use Smlv\Sdk\SmlvWebhookHandler;
+use yii\web\Controller;
+use yii\web\Response;
+use Yii;
 
-**No custom UI development required!** All billing functionality is provided by SMLV widgets.
+class WebhookController extends Controller
+{
+    public $enableCsrfValidation = false;
 
-## Support
+    public function actionSmlv(): Response
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
-- SDK Documentation: `packages/smlv-sdk/README.md`
-- SMLV API Docs: https://docs.smlv.com
-- Support: support@smlv.com
+        $handler = new SmlvWebhookHandler(Yii::$app->smlv->getClient());
+
+        try {
+            $event = $handler->handle(
+                Yii::$app->request->post(),
+                Yii::$app->request->headers->get('X-Smlv-Signature', '')
+            );
+
+            match ($event['type']) {
+                'balance.updated' => $this->handleBalanceUpdated($event),
+                'transaction.completed' => $this->handleTxCompleted($event),
+                default => null,
+            };
+
+            return $this->asJson(['ok' => true]);
+        } catch (\Exception $e) {
+            Yii::$app->response->statusCode = 400;
+            return $this->asJson(['error' => $e->getMessage()]);
+        }
+    }
+
+    private function handleBalanceUpdated(array $event): void
+    {
+        // e.g. clear cached balance for this account
+        Yii::info('Balance updated: ' . $event['account_reference'], __METHOD__);
+    }
+
+    private function handleTxCompleted(array $event): void
+    {
+        // e.g. send in-app notification
+        Yii::info('Transaction completed: ' . $event['transaction_id'], __METHOD__);
+    }
+}
+```
+
+Register the route in `backend/config/main.php`:
+
+```php
+'urlManager' => [
+    'rules' => [
+        'POST webhooks/smlv' => 'webhook/smlv',
+    ],
+],
+```
+
+Configure the webhook URL in your SMLV dashboard:
+```
+https://your-app.com/webhooks/smlv
+```
+
+## What you did NOT need to do
+
+| Old approach | New approach |
+|-------------|-------------|
+| Add `smlv_account_reference` column | ❌ Not needed |
+| Call `createAccount()` on registration | ❌ Not needed |
+| Store and pass account reference around | ❌ Not needed |
+| Set up iframe src URL | ❌ Not needed |
+
+The widget handles account lifecycle entirely. Your only responsibility is passing `externalUserId` and `email`.
+
+---
+
+For full API reference see [README.md](README.md).  
+For advanced scenarios see [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).

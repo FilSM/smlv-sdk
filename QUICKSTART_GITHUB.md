@@ -1,84 +1,100 @@
-# Quick Start Guide - Installing from GitHub
+# Quick Start — SMLV SDK
 
-This is a quick reference for installing SMLV SDK from GitHub.
+Get billing running in your PHP SaaS in under 5 minutes.
 
-## Prerequisites
+## 1. Install
 
-- PHP >= 7.4
-- Composer
-- Git
-
-## Installation Options
-
-### Option 1: Via Composer (from GitHub)
-
-Add to your `composer.json`:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/YOUR_USERNAME/smlv-sdk.git"
-        }
-    ],
-    "require": {
-        "smlv/sdk": "^1.0"
-    }
-}
-```
-
-Run:
-
-```bash
-composer install
-```
-
-### Option 2: Via Packagist (when published)
-
-Simply run:
+**From Packagist:**
 
 ```bash
 composer require smlv/sdk
 ```
 
-## Configuration Example (Yii2)
+**From GitHub (dev / private fork):**
 
-```php
-// common/config/main.php
-return [
-    'components' => [
-        'smlv' => [
-            'class' => 'Smlv\Sdk\Yii2\SmlvComponent',
-            'apiKey' => getenv('SMLV_API_KEY'),
-            'apiSecret' => getenv('SMLV_API_SECRET'),
-            'apiUrl' => 'https://api.smlv.com',
-        ],
-    ],
-];
+```json
+// composer.json
+{
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "https://github.com/smlv/sdk.git"
+		}
+	],
+	"require": {
+		"smlv/sdk": "^2.0"
+	}
+}
 ```
 
-## Basic Usage
-
-```php
-// Create account
-$account = Yii::$app->smlv->getClient()->createAccount('user@example.com');
-
-// Check balance
-$hasBalance = Yii::$app->smlv->getBalanceChecker()->hasBalance($accountRef);
-
-// Embed widget
-echo Yii::$app->smlv->getWidgetGenerator()->generateDepositWidget($accountRef, $returnUrl);
+```bash
+composer install
 ```
 
-## Full Documentation
+## 2. Add credentials to `.env`
 
-- [README.md](README.md) - Quick start and API reference
-- [INTEGRATION_EXAMPLE.md](INTEGRATION_EXAMPLE.md) - Step-by-step integration guide
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Complete documentation
+```dotenv
+SMLV_API_URL=https://api.smlv.com
+SMLV_API_KEY=pk_live_xxxxxxxxxxxxx
+SMLV_API_SECRET=sk_live_xxxxxxxxxxxxx
+SMLV_WIDGET_SECRET=ws_live_xxxxxxxxxxxxx
+```
 
-## Need Help?
+## 3. Initialize the client
 
-- **Issues**: https://github.com/YOUR_USERNAME/smlv-sdk/issues
-- **Support**: support@smlv.com
-- **Docs**: https://docs.smlv.com
+```php
+use Smlv\Sdk\SmlvClient;
+
+$smlv = new SmlvClient(
+    getenv('SMLV_API_KEY'),
+    getenv('SMLV_API_SECRET'),
+    getenv('SMLV_API_URL'),
+    getenv('SMLV_WIDGET_SECRET')
+);
+```
+
+## 4. Embed a widget in your view
+
+```php
+use Smlv\Sdk\SmlvWidgetGenerator;
+
+$widget = new SmlvWidgetGenerator($smlv);
+
+// Pass your user's ID and e-mail — the widget does the rest
+echo $widget->generateDepositWidget(
+    externalUserId: (string) $currentUser->id,
+    email:          $currentUser->email,
+    returnUrl:      'https://your-app.com/billing'
+);
+```
+
+**That's it.** The widget:
+
+- Resolves the SMLV account by `externalUserId + email`
+- Creates the account automatically on first visit
+- Renders a deposit / balance / transaction UI directly in your page
+
+## 5. (Optional) Handle webhooks
+
+```php
+use Smlv\Sdk\SmlvWebhookHandler;
+
+$handler = new SmlvWebhookHandler($smlv);
+$event   = $handler->handle($_POST, $_SERVER['HTTP_X_SMLV_SIGNATURE'] ?? '');
+
+match ($event['type']) {
+    'balance.updated'       => updateCachedBalance($event),
+    'transaction.completed' => notifyUser($event),
+    default                 => null,
+};
+```
+
+## Framework notes
+
+| Framework   | Quick config                                                            |
+| ----------- | ----------------------------------------------------------------------- |
+| **Laravel** | Add to `config/services.php`, bind `SmlvClient` in `AppServiceProvider` |
+| **Yii2**    | Register `\Smlv\Sdk\Yii2\SmlvComponent` in `components` array           |
+| **Symfony** | Use env vars in `services.yaml`, inject via DI                          |
+
+Full details: [README.md](README.md) · [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)

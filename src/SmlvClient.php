@@ -184,27 +184,39 @@ class SmlvClient
     }
 
     /**
-     * Generate JWT token for widget authentication
-     * 
-     * @param string $accountReference Account reference ID
-     * @param string $widgetType Widget type (deposit, balance, transactions, management)
-     * @param string $returnUrl URL to return after operation
-     * @param array $options Additional options
-     * @return string JWT token
+     * Generate short-lived JWT token for widget authentication.
+     *
+     * The widget uses this token to call POST /v1/widget/account/resolve,
+     * which finds the SMLV account by external_user_id or, if none exists,
+     * signals the widget to show the create-account form automatically.
+     *
+     * @param string $externalUserId  Unique subscriber ID in the SaaS system
+     * @param string $email           Subscriber e-mail (pre-fills create-account form)
+     * @param string $widgetType      deposit|balance|transactions|management
+     * @param string $returnUrl       Redirect after success (deposit)
+     * @param array  $options         Additional options passed through to the widget
+     * @param array  $prefill         Extra fields pre-filled in create-account form
+     *                                (first_name, last_name, account_type)
+     * @return string JWT token (TTL: 15 min, includes jti for one-time enforcement)
      */
     public function generateWidgetToken(
-        string $accountReference,
+        string $externalUserId,
+        string $email,
         string $widgetType,
-        string $returnUrl,
-        array $options = []
+        string $returnUrl = '',
+        array $options = [],
+        array $prefill = []
     ): string {
         $payload = [
-            'account_reference' => $accountReference,
-            'widget_type' => $widgetType,
-            'return_url' => $returnUrl,
-            'options' => $options,
-            'iat' => time(),
-            'exp' => time() + 3600, // 1 hour
+            'external_user_id' => $externalUserId,
+            'email'            => $email,
+            'widget_type'      => $widgetType,
+            'return_url'       => $returnUrl,
+            'options'          => $options,
+            'prefill'          => $prefill,
+            'iat'              => time(),
+            'exp'              => time() + 900,
+            'jti'              => bin2hex(random_bytes(8)),
         ];
 
         return \Firebase\JWT\JWT::encode($payload, $this->apiSecret, 'HS256');
