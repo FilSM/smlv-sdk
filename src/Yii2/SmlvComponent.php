@@ -46,6 +46,11 @@ class SmlvComponent extends Component
     public $widgetUrl = 'https://widget.smlvcoin.com';
 
     /**
+     * @var string JWT secret for widget token signing (falls back to apiSecret if not set)
+     */
+    public $widgetSecret;
+
+    /**
      * @var int Balance cache TTL in seconds
      */
     public $balanceCacheTtl = 300;
@@ -95,9 +100,10 @@ class SmlvComponent extends Component
     {
         if ($this->_client === null) {
             $this->_client = new SmlvClient([
-                'api_url'    => $this->apiUrl,
-                'api_key'    => $this->apiKey,
-                'api_secret' => $this->apiSecret,
+                'api_url'       => $this->apiUrl,
+                'api_key'       => $this->apiKey,
+                'api_secret'    => $this->apiSecret,
+                'widget_secret' => $this->widgetSecret,
             ]);
         }
 

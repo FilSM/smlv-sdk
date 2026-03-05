@@ -23,6 +23,9 @@ class SmlvClient
     private $apiSecret;
 
     /** @var string */
+    private $widgetSecret;
+
+    /** @var string */
     private $webhookSecret;
 
     /** @var int */
@@ -42,6 +45,7 @@ class SmlvClient
         $this->apiUrl = rtrim($config['api_url'], '/');
         $this->apiKey = $config['api_key'];
         $this->apiSecret = $config['api_secret'];
+        $this->widgetSecret = $config['widget_secret'] ?? null;
         $this->webhookSecret = $config['webhook_secret'] ?? null;
         $this->timeout = $config['timeout'] ?? 30;
     }
@@ -221,7 +225,8 @@ class SmlvClient
             'jti'              => bin2hex(random_bytes(8)),
         ];
 
-        return \Firebase\JWT\JWT::encode($payload, $this->apiSecret, 'HS256');
+        $secret = $this->widgetSecret ?: $this->apiSecret;
+        return \Firebase\JWT\JWT::encode($payload, $secret, 'HS256');
     }
 
     /**
