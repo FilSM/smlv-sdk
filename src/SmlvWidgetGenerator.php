@@ -52,19 +52,25 @@ class SmlvWidgetGenerator
     /** @var string Widget script version path segment */
     private $scriptVersion;
 
+    /** @var string|null Override API base URL passed into every JS config */
+    private $apiUrl;
+
     /**
      * @param SmlvClient  $client
      * @param string|null $cdnUrl        Override CDN base URL (useful for staging)
      * @param string      $scriptVersion Script version segment ('v2' by default)
+     * @param string|null $apiUrl        API base URL injected into every JS widget config
      */
     public function __construct(
         SmlvClient $client,
         ?string $cdnUrl = null,
-        string $scriptVersion = 'v2'
+        string $scriptVersion = 'v2',
+        ?string $apiUrl = null
     ) {
         $this->client        = $client;
         $this->cdnUrl        = rtrim($cdnUrl ?? 'https://cdn.smlvcoin.com', '/');
         $this->scriptVersion = $scriptVersion;
+        $this->apiUrl        = $apiUrl;
     }
 
     // ─── Embed methods ───────────────────────────────────────────────────────
@@ -259,11 +265,14 @@ class SmlvWidgetGenerator
             'lang'      => $options['language'] ?? 'en',
         ];
 
+        // Inject apiUrl: option overrides constructor default
+        $apiUrl = $options['api_url'] ?? $this->apiUrl;
+        if ($apiUrl) {
+            $config['apiUrl'] = $apiUrl;
+        }
+
         if (!empty($options['return_url'])) {
             $config['returnUrl'] = $options['return_url'];
-        }
-        if (!empty($options['api_url'])) {
-            $config['apiUrl'] = $options['api_url'];
         }
         if (!empty($options['per_page'])) {
             $config['perPage'] = (int) $options['per_page'];

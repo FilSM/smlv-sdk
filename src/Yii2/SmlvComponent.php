@@ -137,7 +137,9 @@ class SmlvComponent extends Component
         if ($this->_widgetGenerator === null) {
             $this->_widgetGenerator = new SmlvWidgetGenerator(
                 $this->getClient(),
-                $this->widgetUrl
+                $this->widgetUrl,
+                'v2',
+                $this->apiUrl
             );
         }
 

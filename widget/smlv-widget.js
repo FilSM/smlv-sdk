@@ -20,7 +20,7 @@
 
 	var VERSION = '2.0.0';
 	var STYLE_ID = 'smlv-widget-styles';
-	var DEFAULT_API_URL = 'https://api.smlv.com';
+	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
 
 	// ─── CSS (injected once into <head>) ────────────────────────────────────────
 
