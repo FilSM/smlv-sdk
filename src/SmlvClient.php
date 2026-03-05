@@ -214,6 +214,7 @@ class SmlvClient
         array $prefill = []
     ): string {
         $payload = [
+            'iss'                    => $this->apiKey,
             'external_subscriber_id' => $externalSubscriberId,
             'email'            => $email,
             'widget_type'      => $widgetType,
