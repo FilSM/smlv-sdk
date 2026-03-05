@@ -50,13 +50,17 @@ use Smlv\Sdk\SmlvWidgetGenerator;
 
 $widget = new SmlvWidgetGenerator($smlv);
 
-// $user->id  — your internal user ID (any string/int)
-// $user->email — user's e-mail
+// $subscriber->id — ID абонента в вашей системе.
+// Один user может иметь несколько абонентов — передавайте ID абонента, не ID пользователя!
+//
+// email — необязателен, используется только для предзаполнения формы создания аккаунта при первом визите.
+// Рекомендуемый порядок: 1) email главного контакта абонента, 2) email текущего пользователя.
+// Если email неизвестен — передайте пустую строку.
 
 echo $widget->generateDepositWidget(
-    externalUserId: (string) $user->id,
-    email:          $user->email,
-    returnUrl:      'https://your-app.com/billing'
+    externalSubscriberId: (string) $subscriber->id,
+    email:                $subscriber->contactEmail ?? $currentUser->email ?? '',
+    returnUrl:            'https://your-app.com/billing'
 );
 ```
 
@@ -72,16 +76,16 @@ The widget will:
 
 ```php
 // Deposit funds
-echo $widget->generateDepositWidget($userId, $email, $returnUrl, $options);
+echo $widget->generateDepositWidget($subscriber->id, $email, $returnUrl, $options);
 
 // Balance overview + sync
-echo $widget->generateBalanceWidget($userId, $email, $options);
+echo $widget->generateBalanceWidget($subscriber->id, $email, $options);
 
 // Paginated transaction history
-echo $widget->generateTransactionsWidget($userId, $email, $options);
+echo $widget->generateTransactionsWidget($subscriber->id, $email, $options);
 
 // Full account management (overview / edit / danger zone)
-echo $widget->generateManagementWidget($userId, $email, $options);
+echo $widget->generateManagementWidget($subscriber->id, $email, $options);
 ```
 
 All methods return a self-contained HTML snippet:
@@ -127,7 +131,7 @@ All methods return a self-contained HTML snippet:
 ```js
 window._smlvQueue = window._smlvQueue || [];
 window._smlvQueue.push({
-  token:    '<?= $widget->generateToken($userId, $email, 'deposit') ?>',
+  token:    '<?= $widget->generateToken($subscriber->id, $email, 'deposit') ?>',
   selector: '#my-widget',
   type:     'deposit',
   options: {
@@ -240,9 +244,10 @@ $this->app->singleton(SmlvClient::class, fn() => new SmlvClient(
 ```php
 
 // In a controller/view
+// $subscriber — абонент (не $user!). Один user может иметь несколько абонентов
 echo Yii::$app->smlv->widget->generateDepositWidget(
-    Yii::$app->user->id,
-    Yii::$app->user->identity->email,
+    (string) $subscriber->id,
+    $subscriber->email,
     Yii::$app->urlManager->createAbsoluteUrl(['/billing/success'])
 );
 ```
@@ -256,15 +261,15 @@ echo $widget->buildScriptTag(defer: true); // defer
 
 // Inline init only (place after the <div>)
 echo $widget->generateInitSnippet(
-    externalUserId: $userId,
-    email:          $email,
-    widgetType:     'balance',
-    options:        ['theme' => 'dark'],
-    selector:       '#my-balance-widget'
+    externalSubscriberId: $subscriber->id,
+    email:                $email,  // optional — see email sourcing note above
+    type:                 'balance',
+    options:              ['theme' => 'dark'],
+    selector:             '#my-balance-widget'
 );
 
 // Signed JWT token only (for manual JS queue push)
-$token = $widget->generateToken($userId, $email, 'deposit');
+$token = $widget->generateToken($subscriber->id, $email, 'deposit');
 ```
 
 ## Security

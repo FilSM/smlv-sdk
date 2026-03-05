@@ -72,19 +72,21 @@ class SmlvWidgetGenerator
     /**
      * Deposit widget embed.
      *
-     * @param string $externalUserId Unique subscriber ID in the SaaS system
-     * @param string $email          Subscriber e-mail
-     * @param string $returnUrl      Redirect after the user confirms the deposit
-     * @param array  $options        See generateEmbed() for available keys
+     * @param string $externalSubscriberId Unique subscriber ID in the SaaS system.
+     *                                     One SaaS user may have several subscribers —
+     *                                     pass the subscriber entity ID, not the user ID.
+     * @param string $email                Subscriber e-mail
+     * @param string $returnUrl            Redirect after the user confirms the deposit
+     * @param array  $options              See generateEmbed() for available keys
      * @return string HTML snippet (safe to echo directly)
      */
     public function generateDepositWidget(
-        string $externalUserId,
-        string $email,
-        string $returnUrl,
+        string $externalSubscriberId,
+        string $email = '',
+        string $returnUrl = '',
         array $options = []
     ): string {
-        return $this->generateEmbed($externalUserId, $email, 'deposit', array_merge(
+        return $this->generateEmbed($externalSubscriberId, $email, 'deposit', array_merge(
             ['return_url' => $returnUrl],
             $options
         ));
@@ -92,35 +94,37 @@ class SmlvWidgetGenerator
 
     /** Balance widget embed. */
     public function generateBalanceWidget(
-        string $externalUserId,
-        string $email,
+        string $externalSubscriberId,
+        string $email = '',
         array $options = []
     ): string {
-        return $this->generateEmbed($externalUserId, $email, 'balance', $options);
+        return $this->generateEmbed($externalSubscriberId, $email, 'balance', $options);
     }
 
     /** Transactions history widget embed. */
     public function generateTransactionsWidget(
-        string $externalUserId,
-        string $email,
+        string $externalSubscriberId,
+        string $email = '',
         array $options = []
     ): string {
-        return $this->generateEmbed($externalUserId, $email, 'transactions', $options);
+        return $this->generateEmbed($externalSubscriberId, $email, 'transactions', $options);
     }
 
     /** Account management widget embed (full CRUD + Danger Zone). */
     public function generateManagementWidget(
-        string $externalUserId,
+        string $externalSubscriberId,
         string $email,
         array $options = []
     ): string {
-        return $this->generateEmbed($externalUserId, $email, 'management', $options);
+        return $this->generateEmbed($externalSubscriberId, $email, 'management', $options);
     }
 
     /**
      * Core embed builder — generates container div + CDN script tag + inline init.
      *
-     * @param string $externalUserId
+     * @param string $externalSubscriberId  Unique subscriber entity ID in the SaaS system.
+     *                                       One SaaS user may have several subscribers —
+     *                                       pass the subscriber entity ID, not the user ID.
      * @param string $email
      * @param string $type   deposit|balance|transactions|management
      * @param array  $options {
@@ -137,13 +141,13 @@ class SmlvWidgetGenerator
      * @return string
      */
     public function generateEmbed(
-        string $externalUserId,
-        string $email,
-        string $type,
+        string $externalSubscriberId,
+        string $email = '',
+        string $type = 'deposit',
         array $options = []
     ): string {
         $token = $this->client->generateWidgetToken(
-            $externalUserId,
+            $externalSubscriberId,
             $email,
             $type,
             $options['return_url'] ?? '',
@@ -191,7 +195,7 @@ class SmlvWidgetGenerator
      * Returns just the inline <script> that queues a single widget init.
      * Pair this with buildScriptTag() loaded elsewhere in the layout.
      *
-     * @param string $externalUserId
+     * @param string $externalSubscriberId  Unique subscriber entity ID in the SaaS system.
      * @param string $email
      * @param string $type     deposit|balance|transactions|management
      * @param array  $options  Same keys as generateEmbed()
@@ -199,14 +203,14 @@ class SmlvWidgetGenerator
      * @return string
      */
     public function generateInitSnippet(
-        string $externalUserId,
-        string $email,
-        string $type,
-        array $options,
-        string $selector
+        string $externalSubscriberId,
+        string $email = '',
+        string $type = 'deposit',
+        array $options = [],
+        string $selector = ''
     ): string {
         $token = $this->client->generateWidgetToken(
-            $externalUserId,
+            $externalSubscriberId,
             $email,
             $type,
             $options['return_url'] ?? '',
@@ -221,13 +225,13 @@ class SmlvWidgetGenerator
      * Returns only the JWT token (for custom JS widget init).
      */
     public function generateToken(
-        string $externalUserId,
-        string $email,
-        string $type,
+        string $externalSubscriberId,
+        string $email = '',
+        string $type = 'deposit',
         array $options = []
     ): string {
         return $this->client->generateWidgetToken(
-            $externalUserId,
+            $externalSubscriberId,
             $email,
             $type,
             $options['return_url'] ?? '',

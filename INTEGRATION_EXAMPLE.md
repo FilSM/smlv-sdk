@@ -54,21 +54,28 @@ class BillingController extends Controller
         $smlv   = Yii::$app->smlv->getClient();
         $widget = new SmlvWidgetGenerator($smlv);
 
-        $user = Yii::$app->user->identity;
+        // Абонент не хранит email напрямую. Стратегия получения email:
+        // 1) email главного контакта (контактное лицо абонента)
+        // 2) email текущего пользователя eGram
+        // 3) пустая строка — виджет сам попросит ввести
+        $subscriber = $this->loadCurrentSubscriber();
+        $email = $subscriber->mainClient->clientMainContact->email
+            ?? Yii::$app->user->identity->email
+            ?? '';
 
         return $this->render('index', [
             'depositWidget'      => $widget->generateDepositWidget(
-                (string) $user->id,
-                $user->email,
+                (string) $subscriber->id,
+                $email,
                 Yii::$app->urlManager->createAbsoluteUrl(['/billing/success'])
             ),
             'balanceWidget'      => $widget->generateBalanceWidget(
-                (string) $user->id,
-                $user->email
+                (string) $subscriber->id,
+                $email
             ),
             'transactionsWidget' => $widget->generateTransactionsWidget(
-                (string) $user->id,
-                $user->email
+                (string) $subscriber->id,
+                $email
             ),
         ]);
     }
@@ -121,14 +128,14 @@ On first visit the widget will display a brief account-creation form inside the 
 // Controller action
 public function actionManage(): string
 {
-    $smlv   = Yii::$app->smlv->getClient();
-    $widget = new SmlvWidgetGenerator($smlv);
-    $user   = Yii::$app->user->identity;
+    $smlv       = Yii::$app->smlv->getClient();
+    $widget     = new SmlvWidgetGenerator($smlv);
+    $subscriber = $this->loadCurrentSubscriber();
 
     return $this->render('manage', [
         'managementWidget' => $widget->generateManagementWidget(
-            (string) $user->id,
-            $user->email,
+            (string) $subscriber->id,
+            $subscriber->email,
             ['theme' => 'light']
         ),
     ]);

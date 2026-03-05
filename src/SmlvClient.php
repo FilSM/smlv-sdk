@@ -187,10 +187,12 @@ class SmlvClient
      * Generate short-lived JWT token for widget authentication.
      *
      * The widget uses this token to call POST /v1/widget/account/resolve,
-     * which finds the SMLV account by external_user_id or, if none exists,
+     * which finds the SMLV account by external_subscriber_id or, if none exists,
      * signals the widget to show the create-account form automatically.
      *
-     * @param string $externalUserId  Unique subscriber ID in the SaaS system
+     * @param string $externalSubscriberId  Unique subscriber ID in the SaaS system.
+     *                                      One SaaS user may have several subscribers —
+     *                                      pass the subscriber entity ID, not the user ID.
      * @param string $email           Subscriber e-mail (pre-fills create-account form)
      * @param string $widgetType      deposit|balance|transactions|management
      * @param string $returnUrl       Redirect after success (deposit)
@@ -200,15 +202,15 @@ class SmlvClient
      * @return string JWT token (TTL: 15 min, includes jti for one-time enforcement)
      */
     public function generateWidgetToken(
-        string $externalUserId,
-        string $email,
-        string $widgetType,
+        string $externalSubscriberId,
+        string $email = '',
+        string $widgetType = 'deposit',
         string $returnUrl = '',
         array $options = [],
         array $prefill = []
     ): string {
         $payload = [
-            'external_user_id' => $externalUserId,
+            'external_subscriber_id' => $externalSubscriberId,
             'email'            => $email,
             'widget_type'      => $widgetType,
             'return_url'       => $returnUrl,
@@ -354,7 +356,7 @@ class SmlvClient
      */
     private function validateAccountData(array $data): void
     {
-        $required = ['external_user_id', 'email', 'account_type'];
+        $required = ['external_subscriber_id', 'email', 'account_type'];
 
         foreach ($required as $field) {
             if (empty($data[$field])) {
