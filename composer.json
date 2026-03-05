@@ -1,0 +1,33 @@
+{
+	"name": "smlv/sdk",
+	"description": "SMLV Platform SDK - Easy integration of SMLV payment system into any SaaS",
+	"type": "library",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "SMLV Team",
+			"email": "dev@smlv.com"
+		}
+	],
+	"require": {
+		"php": ">=7.4",
+		"ext-json": "*",
+		"ext-curl": "*",
+		"firebase/php-jwt": "^6.0"
+	},
+	"require-dev": {
+		"phpunit/phpunit": "^9.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Smlv\\Sdk\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Smlv\\Sdk\\Tests\\": "tests/"
+		}
+	},
+	"minimum-stability": "stable",
+	"prefer-stable": true
+}

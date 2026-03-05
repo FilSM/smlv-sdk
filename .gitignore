@@ -1,0 +1,32 @@
+# Exclude vendor dependencies
+/vendor/
+
+# Exclude IDE files
+/.idea/
+/.vscode/
+*.sublime-project
+*.sublime-workspace
+.phpstorm.meta.php
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Exclude composer files
+/composer.lock
+
+# Exclude test files
+/phpunit.xml
+/.phpunit.result.cache
+
+# Exclude coverage reports
+/coverage/
+/clover.xml
+
+# Exclude build artifacts
+/build/
+/dist/
+
+# Exclude log files
+*.log
