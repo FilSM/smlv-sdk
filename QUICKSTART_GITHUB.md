@@ -1,4 +1,4 @@
-# Quick Start — SMLV SDK
+﻿# Quick Start — SMLV SDK
 
 Get billing running in your PHP SaaS in under 5 minutes.
 
@@ -34,7 +34,7 @@ composer install
 ## 2. Add credentials to `.env`
 
 ```dotenv
-SMLV_API_URL=https://api.smlv.com
+SMLV_API_URL=https://api.smlvcoin.com
 SMLV_API_KEY=pk_live_xxxxxxxxxxxxx
 SMLV_API_SECRET=sk_live_xxxxxxxxxxxxx
 SMLV_WIDGET_SECRET=ws_live_xxxxxxxxxxxxx

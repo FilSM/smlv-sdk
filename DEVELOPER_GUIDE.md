@@ -1,4 +1,4 @@
-# SMLV SDK Developer Guide
+﻿# SMLV SDK Developer Guide
 
 Complete reference for integrating SMLV billing into your SaaS application.
 
@@ -45,12 +45,10 @@ composer require smlv/sdk
 ```json
 // composer.json
 {
-    "repositories": [
-        { "type": "path", "url": "./packages/smlv-sdk" }
-    ],
-    "require": {
-        "smlv/sdk": "*"
-    }
+	"repositories": [{ "type": "path", "url": "./packages/smlv-sdk" }],
+	"require": {
+		"smlv/sdk": "*"
+	}
 }
 ```
 
@@ -60,11 +58,11 @@ composer update smlv/sdk
 
 ### Requirements
 
-| Dependency | Minimum version |
-|------------|----------------|
-| PHP | 7.4 |
-| `firebase/php-jwt` | ^6.0 |
-| OpenSSL extension | any |
+| Dependency         | Minimum version |
+| ------------------ | --------------- |
+| PHP                | 7.4             |
+| `firebase/php-jwt` | ^6.0            |
+| OpenSSL extension  | any             |
 
 ---
 
@@ -98,7 +96,7 @@ SmlvWidgetGenerator  ────────→ HTML snippet
 ### 1. Set environment variables
 
 ```dotenv
-SMLV_API_URL=https://api.smlv.com
+SMLV_API_URL=https://api.smlvcoin.com
 SMLV_API_KEY=pk_live_xxxxxxxxxxxx
 SMLV_API_SECRET=sk_live_xxxxxxxxxxxx
 SMLV_WIDGET_SECRET=ws_live_xxxxxxxxxxxx
@@ -180,23 +178,23 @@ $html = $widget->generateEmbed(
 
 ### Common options
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `theme` | `string` | `'light'` | `'light'` or `'dark'` |
-| `language` | `string` | `'en'` | UI language code |
+| Key        | Type     | Default   | Description           |
+| ---------- | -------- | --------- | --------------------- |
+| `theme`    | `string` | `'light'` | `'light'` or `'dark'` |
+| `language` | `string` | `'en'`    | UI language code      |
 
 ### Deposit-specific options
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `currencies` | `string[]` | Allowed currencies (empty = all) |
-| `default_currency` | `string` | Pre-selected currency |
+| Key                | Type       | Description                      |
+| ------------------ | ---------- | -------------------------------- |
+| `currencies`       | `string[]` | Allowed currencies (empty = all) |
+| `default_currency` | `string`   | Pre-selected currency            |
 
 ### Balance-specific options
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `show_sync` | `bool` | `true` | Show / hide Sync button |
+| Key         | Type   | Default | Description             |
+| ----------- | ------ | ------- | ----------------------- |
+| `show_sync` | `bool` | `true`  | Show / hide Sync button |
 
 ### Prefill data (passed to account creation form)
 
@@ -226,21 +224,29 @@ $token = $widget->generateToken($userId, $email, 'deposit', ['theme' => 'dark'])
 ```html
 <div id="my-deposit-widget" data-smlv></div>
 
-<script src="https://cdn.smlv.com/v2/smlv-widget.js" async></script>
+<script src="https://cdn.smlvcoin.com/v2/smlv-widget.js" async></script>
 <script>
-  window._smlvQueue = window._smlvQueue || [];
-  window._smlvQueue.push({
-    token:    '<?= htmlspecialchars($token) ?>',
-    selector: '#my-deposit-widget',
-    type:     'deposit',
-    options: {
-      theme: 'dark',
-      onReady:   function(instance) { console.log('Widget ready', instance); },
-      onSuccess: function(data)     { location.reload(); },
-      onError:   function(err)      { alert('Error: ' + err.message); },
-      onClose:   function()         { console.log('Widget closed'); },
-    }
-  });
+	window._smlvQueue = window._smlvQueue || [];
+	window._smlvQueue.push({
+		token: '<?= htmlspecialchars($token) ?>',
+		selector: '#my-deposit-widget',
+		type: 'deposit',
+		options: {
+			theme: 'dark',
+			onReady: function (instance) {
+				console.log('Widget ready', instance);
+			},
+			onSuccess: function (data) {
+				location.reload();
+			},
+			onError: function (err) {
+				alert('Error: ' + err.message);
+			},
+			onClose: function () {
+				console.log('Widget closed');
+			},
+		},
+	});
 </script>
 ```
 
@@ -393,17 +399,17 @@ echo $widget->generateManagementWidget(
 ```yaml
 # config/services.yaml
 parameters:
-    smlv.api_url:       '%env(SMLV_API_URL)%'
-    smlv.api_key:       '%env(SMLV_API_KEY)%'
-    smlv.api_secret:    '%env(SMLV_API_SECRET)%'
+    smlv.api_url: '%env(SMLV_API_URL)%'
+    smlv.api_key: '%env(SMLV_API_KEY)%'
+    smlv.api_secret: '%env(SMLV_API_SECRET)%'
     smlv.widget_secret: '%env(SMLV_WIDGET_SECRET)%'
 
 services:
     Smlv\Sdk\SmlvClient:
         arguments:
-            $apiKey:       '%smlv.api_key%'
-            $apiSecret:    '%smlv.api_secret%'
-            $apiUrl:       '%smlv.api_url%'
+            $apiKey: '%smlv.api_key%'
+            $apiSecret: '%smlv.api_secret%'
+            $apiUrl: '%smlv.api_url%'
             $widgetSecret: '%smlv.widget_secret%'
 
     Smlv\Sdk\SmlvWidgetGenerator:
@@ -536,16 +542,16 @@ try {
 
 ### Event reference
 
-| Event type | Key payload fields |
-|------------|-------------------|
-| `account.created` | `account_reference`, `status` |
-| `account.updated` | `account_reference`, `changes` |
-| `account.closed` | `account_reference` |
-| `account.reactivated` | `account_reference` |
-| `balance.updated` | `account_reference`, `old_balance`, `new_balance`, `currency` |
-| `transaction.pending` | `transaction_id`, `amount`, `currency`, `type` |
-| `transaction.completed` | `transaction_id`, `amount`, `currency`, `type`, `balance` |
-| `transaction.failed` | `transaction_id`, `error`, `error_code` |
+| Event type              | Key payload fields                                            |
+| ----------------------- | ------------------------------------------------------------- |
+| `account.created`       | `account_reference`, `status`                                 |
+| `account.updated`       | `account_reference`, `changes`                                |
+| `account.closed`        | `account_reference`                                           |
+| `account.reactivated`   | `account_reference`                                           |
+| `balance.updated`       | `account_reference`, `old_balance`, `new_balance`, `currency` |
+| `transaction.pending`   | `transaction_id`, `amount`, `currency`, `type`                |
+| `transaction.completed` | `transaction_id`, `amount`, `currency`, `type`, `balance`     |
+| `transaction.failed`    | `transaction_id`, `error`, `error_code`                       |
 
 ### Retry policy
 
@@ -570,15 +576,15 @@ X-Signature: HMAC-SHA256(api_secret, "api_key\ntimestamp\nbody")
 
 ```json
 {
-  "external_user_id": "42",
-  "email":            "user@example.com",
-  "widget_type":      "deposit",
-  "return_url":       "https://your-app.com/success",
-  "options":          {},
-  "prefill":          {},
-  "iat":              1717000000,
-  "exp":              1717000900,
-  "jti":              "uuid-v4"
+	"external_user_id": "42",
+	"email": "user@example.com",
+	"widget_type": "deposit",
+	"return_url": "https://your-app.com/success",
+	"options": {},
+	"prefill": {},
+	"iat": 1717000000,
+	"exp": 1717000900,
+	"jti": "uuid-v4"
 }
 ```
 
@@ -632,14 +638,14 @@ $this->assertStringContainsString('smlv-widget.js', $html);
 
 ### What changed
 
-| v1.x | v2.0 |
-|------|------|
+| v1.x                                                   | v2.0                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------ |
 | `generateDepositWidget($accountReference, $returnUrl)` | `generateDepositWidget($externalUserId, $email, $returnUrl)` |
-| Rendered `<iframe src="...?token=...">` | Renders `<div>` + CDN `<script>` + inline init |
-| Token in URL query string | Token in inline `<script>` block |
-| Required `smlv_account_reference` DB column | No DB column needed |
-| SaaS called `createAccount()` on registration | Widget auto-creates account on first visit |
-| Management widget was read-only | Full CRUD (edit / deactivate / delete) |
+| Rendered `<iframe src="...?token=...">`                | Renders `<div>` + CDN `<script>` + inline init               |
+| Token in URL query string                              | Token in inline `<script>` block                             |
+| Required `smlv_account_reference` DB column            | No DB column needed                                          |
+| SaaS called `createAccount()` on registration          | Widget auto-creates account on first visit                   |
+| Management widget was read-only                        | Full CRUD (edit / deactivate / delete)                       |
 
 ### Migration steps
 
@@ -656,7 +662,7 @@ $this->assertStringContainsString('smlv-widget.js', $html);
 ### Widget doesn't load
 
 - Check browser console for errors
-- Verify CDN URL is reachable: `https://cdn.smlv.com/v2/smlv-widget.js`
+- Verify CDN URL is reachable: `https://cdn.smlvcoin.com/v2/smlv-widget.js`
 - Ensure the `<div data-smlv>` is in the DOM before the init script runs (or use `async` loading queue)
 
 ### "Invalid token" error in widget

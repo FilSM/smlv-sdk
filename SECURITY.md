@@ -1,4 +1,4 @@
-# Security Policy
+﻿# Security Policy
 
 ## Supported Versions
 
@@ -12,7 +12,7 @@
 
 If you discover a security vulnerability, please send an email to:
 
-**security@smlv.com**
+**security@smlvcoin.com**
 
 Include:
 - Description of the vulnerability

@@ -1,4 +1,4 @@
-# Contributing to SMLV SDK
+﻿# Contributing to SMLV SDK
 
 Thank you for considering contributing to SMLV SDK! We welcome contributions from the community.
 
@@ -84,6 +84,6 @@ composer test
 
 ## Questions?
 
-Create an issue or email: support@smlv.com
+Create an issue or email: support@smlvcoin.com
 
 Thank you for contributing! 🚀

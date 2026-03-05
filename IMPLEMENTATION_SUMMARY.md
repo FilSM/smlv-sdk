@@ -1,4 +1,4 @@
-# SMLV SDK Implementation Summary
+﻿# SMLV SDK Implementation Summary
 
 ## Project Overview
 
@@ -104,8 +104,8 @@ This document summarizes the complete implementation of the SMLV SDK - a drop-in
 
 - Yii2 application component for easy access (part of SDK)
     - `apiSecret` - SMLV API secret (required)
-    - `apiUrl` - API base URL (default: https://api.smlv.com)
-    - `widgetUrl` - Widget base URL (default: https://widget.smlv.com)
+    - `apiUrl` - API base URL (default: https://api.smlvcoin.com)
+    - `widgetUrl` - Widget base URL (default: https://widget.smlvcoin.com)
     - `balanceCacheTtl` - Cache TTL in seconds (default: 300)
 - Lazy initialization of client, balance checker, widget generator, webhook handler
 - Helper methods: `createAccountForUser()`, `getOrCreateAccountForUser()`

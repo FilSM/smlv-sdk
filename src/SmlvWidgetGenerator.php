@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Smlv\Sdk;
 
@@ -63,7 +63,7 @@ class SmlvWidgetGenerator
         string $scriptVersion = 'v2'
     ) {
         $this->client        = $client;
-        $this->cdnUrl        = rtrim($cdnUrl ?? 'https://cdn.smlv.com', '/');
+        $this->cdnUrl        = rtrim($cdnUrl ?? 'https://cdn.smlvcoin.com', '/');
         $this->scriptVersion = $scriptVersion;
     }
 

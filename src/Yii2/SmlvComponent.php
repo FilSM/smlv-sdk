@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace Smlv\Sdk\Yii2;
 
@@ -18,8 +18,8 @@ use Smlv\Sdk\SmlvWidgetGenerator;
  *         'class' => 'Smlv\Sdk\Yii2\SmlvComponent',
  *         'apiKey' => 'your-api-key',
  *         'apiSecret' => 'your-api-secret',
- *         'apiUrl' => 'https://api.smlv.com',
- *         'widgetUrl' => 'https://widget.smlv.com',
+ *         'apiUrl' => 'https://api.smlvcoin.com',
+ *         'widgetUrl' => 'https://widget.smlvcoin.com',
  *     ],
  * ],
  */
@@ -38,12 +38,12 @@ class SmlvComponent extends Component
     /**
      * @var string SMLV API Base URL
      */
-    public $apiUrl = 'https://api.smlv.com';
+    public $apiUrl = 'https://api.smlvcoin.com';
 
     /**
      * @var string SMLV Widget Base URL
      */
-    public $widgetUrl = 'https://widget.smlv.com';
+    public $widgetUrl = 'https://widget.smlvcoin.com';
 
     /**
      * @var int Balance cache TTL in seconds

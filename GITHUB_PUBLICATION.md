@@ -1,4 +1,4 @@
-# GitHub Publication Guide
+﻿# GitHub Publication Guide
 
 This guide explains how to publish SMLV SDK to GitHub and install it from there.
 
@@ -182,7 +182,7 @@ Add topics for discoverability:
 ### About Section
 
 - **Description**: "Drop-in billing solution for SaaS applications"
-- **Website**: https://smlv.com
+- **Website**: https://smlvcoin.com
 - **Topics**: (as above)
 
 ## Versioning Strategy
@@ -249,8 +249,8 @@ Update `CHANGELOG.md` for every release:
 
 - **Documentation**: README.md, DEVELOPER_GUIDE.md
 - **Issues**: GitHub Issues
-- **Email**: support@smlv.com
-- **Website**: https://smlv.com
+- **Email**: support@smlvcoin.com
+- **Website**: https://smlvcoin.com
 
 ---
 

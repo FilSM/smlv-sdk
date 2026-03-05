@@ -1,4 +1,4 @@
-# SMLV SDK
+﻿# SMLV SDK
 
 PHP SDK for integrating SMLV billing into your SaaS application.
 
@@ -32,7 +32,7 @@ composer require smlv/sdk
 use Smlv\Sdk\SmlvClient;
 
 $smlv = new SmlvClient([
-    'api_url'       => 'https://api.smlv.com',
+    'api_url'       => 'https://api.smlvcoin.com',
     'api_key'       => 'your-api-key',
     'api_secret'    => 'your-api-secret',
     'widget_secret' => 'your-widget-secret',
@@ -88,7 +88,7 @@ All methods return a self-contained HTML snippet:
 
 ```html
 <div id="smlv-widget-xxxxxxxx" data-smlv></div>
-<script src="https://cdn.smlv.com/v2/smlv-widget.js" async></script>
+<script src="https://cdn.smlvcoin.com/v2/smlv-widget.js" async></script>
 <script>
 	window._smlvQueue = window._smlvQueue || [];
 	window._smlvQueue.push({
@@ -205,7 +205,7 @@ try {
 ```php
 // config/services.php
 'smlv' => [
-    'api_url'       => env('SMLV_API_URL', 'https://api.smlv.com'),
+    'api_url'       => env('SMLV_API_URL', 'https://api.smlvcoin.com'),
     'api_key'       => env('SMLV_API_KEY'),
     'api_secret'    => env('SMLV_API_SECRET'),
     'widget_secret' => env('SMLV_WIDGET_SECRET'),
@@ -227,7 +227,7 @@ $this->app->singleton(SmlvClient::class, fn() => new SmlvClient(
 'components' => [
     'smlv' => [
         'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
-        'apiUrl'       => 'https://api.smlv.com',
+        'apiUrl'       => 'https://api.smlvcoin.com',
         'apiKey'       => 'pk_live_xxxxxxxxxxxx',
         'apiSecret'    => 'sk_live_xxxxxxxxxxxx',
         'widgetSecret' => 'ws_live_xxxxxxxxxxxx',
@@ -285,10 +285,10 @@ composer test
 
 ## Support
 
-- Documentation: https://docs.smlv.com
-- API Reference: https://api.smlv.com/docs
+- Documentation: https://docs.smlvcoin.com
+- API Reference: https://api.smlvcoin.com/docs
 - Issues: https://github.com/smlv/sdk/issues
-- Email: support@smlv.com
+- Email: support@smlvcoin.com
 
 ## License
 

@@ -1,4 +1,4 @@
-# Integration Example
+﻿# Integration Example
 
 A complete working example of SMLV SDK integration into a PHP SaaS application.
 
@@ -25,7 +25,7 @@ return [
     'components' => [
         'smlv' => [
             'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
-            'apiUrl'       => 'https://api.smlv.com',
+            'apiUrl'       => 'https://api.smlvcoin.com',
             'apiKey'       => 'pk_live_xxxxxxxxxxxx',
             'apiSecret'    => 'sk_live_xxxxxxxxxxxx',
             'widgetSecret' => 'ws_live_xxxxxxxxxxxx',
