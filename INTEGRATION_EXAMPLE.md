@@ -142,6 +142,7 @@ public function actionManage(): string
 ```
 
 The management widget provides:
+
 - **Overview tab** — read-only account snapshot
 - **Edit tab** — update profile fields via PATCH `/account`
 - **Danger Zone tab** — deactivate or permanently delete account
@@ -213,18 +214,19 @@ Register the route in `backend/config/main.php`:
 ```
 
 Configure the webhook URL in your SMLV dashboard:
+
 ```
 https://your-app.com/webhooks/smlv
 ```
 
 ## What you did NOT need to do
 
-| Old approach | New approach |
-|-------------|-------------|
-| Add `smlv_account_reference` column | ❌ Not needed |
-| Call `createAccount()` on registration | ❌ Not needed |
+| Old approach                            | New approach  |
+| --------------------------------------- | ------------- |
+| Add `smlv_account_reference` column     | ❌ Not needed |
+| Call `createAccount()` on registration  | ❌ Not needed |
 | Store and pass account reference around | ❌ Not needed |
-| Set up iframe src URL | ❌ Not needed |
+| Set up iframe src URL                   | ❌ Not needed |
 
 The widget handles account lifecycle entirely. Your only responsibility is passing `externalUserId` and `email`.
 
