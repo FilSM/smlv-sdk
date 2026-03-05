@@ -1,4 +1,4 @@
-﻿# GitHub Publication Guide
+# GitHub Publication Guide
 
 This guide explains how to publish SMLV SDK to GitHub and install it from there.
 

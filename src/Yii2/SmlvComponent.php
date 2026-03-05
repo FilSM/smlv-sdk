@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace Smlv\Sdk\Yii2;
 

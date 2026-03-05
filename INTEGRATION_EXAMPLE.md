@@ -1,4 +1,4 @@
-﻿# Integration Example
+# Integration Example
 
 A complete working example of SMLV SDK integration into a PHP SaaS application.
 

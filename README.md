@@ -1,4 +1,4 @@
-﻿# SMLV SDK
+# SMLV SDK
 
 PHP SDK for integrating SMLV billing into your SaaS application.
 

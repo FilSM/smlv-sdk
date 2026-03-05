@@ -1,4 +1,4 @@
-﻿# SMLV SDK Developer Guide
+# SMLV SDK Developer Guide
 
 Complete reference for integrating SMLV billing into your SaaS application.
 

@@ -1,4 +1,4 @@
-﻿# Contributing to SMLV SDK
+# Contributing to SMLV SDK
 
 Thank you for considering contributing to SMLV SDK! We welcome contributions from the community.
 

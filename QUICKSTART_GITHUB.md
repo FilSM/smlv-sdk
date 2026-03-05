@@ -1,4 +1,4 @@
-﻿# Quick Start — SMLV SDK
+# Quick Start — SMLV SDK
 
 Get billing running in your PHP SaaS in under 5 minutes.
 

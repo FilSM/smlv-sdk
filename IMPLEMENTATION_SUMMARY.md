@@ -1,4 +1,4 @@
-﻿# SMLV SDK Implementation Summary
+# SMLV SDK Implementation Summary
 
 ## Project Overview
 
