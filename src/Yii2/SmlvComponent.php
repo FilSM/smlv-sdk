@@ -94,7 +94,11 @@ class SmlvComponent extends Component
     public function getClient(): SmlvClient
     {
         if ($this->_client === null) {
-            $this->_client = new SmlvClient($this->apiKey, $this->apiSecret, $this->apiUrl);
+            $this->_client = new SmlvClient([
+                'api_url'    => $this->apiUrl,
+                'api_key'    => $this->apiKey,
+                'api_secret' => $this->apiSecret,
+            ]);
         }
 
         return $this->_client;
