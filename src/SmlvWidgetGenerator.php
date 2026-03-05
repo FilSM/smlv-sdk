@@ -15,15 +15,15 @@ namespace Smlv\Sdk;
  *   $generator = new SmlvWidgetGenerator($client);
  *
  *   // One line — widget auto-creates account if it doesn't exist yet:
- *   echo $generator->generateDepositWidget($user->id, $user->email, '/thanks');
+ *   echo $generator->generateDepositWidget($subscriber->id, $email, '/thanks');
  *
  *   // Or: CDN script tag once in <head>, inline init wherever needed:
  *   echo $generator->buildScriptTag(defer: true); // in layout
- *   echo $generator->generateInitSnippet($user->id, $user->email, 'deposit', [], '#my-div');
+ *   echo $generator->generateInitSnippet($subscriber->id, $email, 'deposit', [], '#my-div');
  *
  * ─── Flow ────────────────────────────────────────────────────────────────────
  *
- *   1. Server generates JWT with external_user_id + email → injects into page
+ *   1. Server generates JWT with external_subscriber_id + email → injects into page
  *   2. Widget calls POST /v1/widget/account/resolve
  *      a. Account found → renders requested widget type
  *      b. Not found    → shows create-account form → on submit renders widget
