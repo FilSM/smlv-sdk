@@ -117,13 +117,22 @@
 
 	// ─── Lightweight fetch-based API client ─────────────────────────────────────
 
-	function SmlvApi(apiUrl, token) {
+	function SmlvApi(apiUrl, token, xdebug) {
 		this.base = (apiUrl || DEFAULT_API_URL).replace(/\/$/, '');
 		this.token = token;
+		this.xdebug = !!xdebug;
 	}
 
 	SmlvApi.prototype._req = function (method, path, data) {
 		var url = this.base + '/v1/widget' + path;
+		var sep = '?';
+
+		// Debug mode: append Xdebug session trigger to every API request
+		if (this.xdebug) {
+			url += sep + 'XDEBUG_SESSION_START=netbeans-xdebug';
+			sep = '&';
+		}
+
 		var opts = {
 			method: method,
 			headers: {
@@ -148,7 +157,7 @@
 						);
 					})
 					.join('&');
-				if (qs) url += '?' + qs;
+				if (qs) url += sep + qs;
 			} else {
 				opts.body = JSON.stringify(data);
 			}
@@ -1274,7 +1283,7 @@
 		el.innerHTML = '<div class="smlv-card"></div>';
 		this.el = el;
 
-		var api = new SmlvApi(cfg.apiUrl, cfg.token);
+		var api = new SmlvApi(cfg.apiUrl, cfg.token, cfg.xdebug);
 		var cb = {
 			onReady: cfg.onReady || null,
 			onSuccess: cfg.onSuccess || null,

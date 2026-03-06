@@ -271,6 +271,11 @@ class SmlvWidgetGenerator
             $config['apiUrl'] = $apiUrl;
         }
 
+        // Xdebug support: if xdebug option is set, widget appends XDEBUG_SESSION_START to API requests
+        if (!empty($options['xdebug'])) {
+            $config['xdebug'] = true;
+        }
+
         if (!empty($options['return_url'])) {
             $config['returnUrl'] = $options['return_url'];
         }
