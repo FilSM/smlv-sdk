@@ -142,6 +142,9 @@
 				'X-Widget-Version': VERSION,
 			},
 		};
+		if (this.lang) {
+			opts.headers['X-Language'] = this.lang;
+		}
 
 		if (data) {
 			if (method === 'GET') {
@@ -1283,7 +1286,7 @@
 		el.innerHTML = '<div class="smlv-card"></div>';
 		this.el = el;
 
-		var api = new SmlvApi(cfg.apiUrl, cfg.token, cfg.xdebug);
+		var api = new SmlvApi(cfg.apiUrl, cfg.token, cfg.xdebug, cfg.lang);
 		var cb = {
 			onReady: cfg.onReady || null,
 			onSuccess: cfg.onSuccess || null,
