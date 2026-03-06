@@ -117,10 +117,11 @@
 
 	// ─── Lightweight fetch-based API client ─────────────────────────────────────
 
-	function SmlvApi(apiUrl, token, xdebug) {
+	function SmlvApi(apiUrl, token, xdebug, lang) {
 		this.base = (apiUrl || DEFAULT_API_URL).replace(/\/$/, '');
 		this.token = token;
 		this.xdebug = !!xdebug;
+		this.lang = lang || null;
 	}
 
 	SmlvApi.prototype._req = function (method, path, data) {
