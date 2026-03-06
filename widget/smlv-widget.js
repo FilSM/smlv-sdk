@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  * SMLV Widget v2.0.0
  * https://cdn.smlv.com/v2/smlv-widget.js
  * (c) SMLV Platform — MIT License
@@ -18,7 +18,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
 
-	var VERSION = '2.0.0';
+	var VERSION = '2.0.8';
 	var STYLE_ID = 'smlv-widget-styles';
 	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
 
@@ -114,6 +114,27 @@
 		'.smlv-confirm p{margin:0 0 12px;color:var(--smlv-text);line-height:1.5;}',
 		'.smlv-confirm .smlv-form-actions{margin-top:0;padding-top:0;border-top:none;}',
 	].join('');
+
+	// ─── i18n ───────────────────────────────────────────────────────────────────
+
+	function mkT(lang) {
+		var i18n = window.SmlvWidgetI18n || {};
+		var d = i18n[lang] || i18n['en'] || {};
+		var en = i18n['en'] || {};
+		return function (key, vars) {
+			var s =
+				d[key] !== undefined
+					? d[key]
+					: en[key] !== undefined
+						? en[key]
+						: key;
+			if (vars)
+				Object.keys(vars).forEach(function (k) {
+					s = s.replace('{' + k + '}', vars[k]);
+				});
+			return s;
+		};
+	}
 
 	// ─── Lightweight fetch-based API client ─────────────────────────────────────
 
@@ -253,11 +274,11 @@
 		);
 	}
 
-	function copyToClipboard(text, btn) {
+	function copyToClipboard(text, btn, copiedMsg) {
 		if (!navigator.clipboard) return;
 		navigator.clipboard.writeText(text).then(function () {
 			var orig = btn.textContent;
-			btn.textContent = 'Copied!';
+			btn.textContent = copiedMsg || 'Copied!';
 			setTimeout(function () {
 				btn.textContent = orig;
 			}, 1600);
@@ -292,42 +313,41 @@
 
 	// ─── Create-account form ─────────────────────────────────────────────────────
 
-	function renderCreateForm(card, api, prefill, cb, onCreated) {
+	function renderCreateForm(card, api, prefill, cb, onCreated, lang) {
+		var t = mkT(lang);
 		card.innerHTML = '';
-		card.appendChild(mkHeader('Create Account'));
-		card.appendChild(
-			alertBox('info', 'Set up your SMLV account to get started.'),
-		);
+		card.appendChild(mkHeader(t('createAccount')));
+		card.appendChild(alertBox('info', t('setupPrompt')));
 
 		var emailEl = h('input', {
 			className: 'smlv-input',
 			type: 'email',
 			value: prefill.email || '',
-			placeholder: 'youremail@example.com',
+			placeholder: t('emailPlaceholder'),
 		});
 		var firstEl = h('input', {
 			className: 'smlv-input',
 			type: 'text',
 			value: prefill.first_name || '',
-			placeholder: 'First name',
+			placeholder: t('firstNamePlaceholder'),
 		});
 		var lastEl = h('input', {
 			className: 'smlv-input',
 			type: 'text',
 			value: prefill.last_name || '',
-			placeholder: 'Last name (optional)',
+			placeholder: t('lastNamePlaceholder'),
 		});
 		var typeEl = h('select', { className: 'smlv-select' }, [
-			h('option', { value: 'natural' }, 'Individual (Natural person)'),
-			h('option', { value: 'legal' }, 'Company (Legal entity)'),
+			h('option', { value: 'natural' }, t('individual')),
+			h('option', { value: 'legal' }, t('company')),
 		]);
 		if (prefill.account_type === 'legal') typeEl.value = 'legal';
 
 		[
-			['Email *', emailEl],
-			['First name *', firstEl],
-			['Last name', lastEl],
-			['Account type', typeEl],
+			[t('emailLabel'), emailEl],
+			[t('firstNameLabel'), firstEl],
+			[t('lastNameLabel'), lastEl],
+			[t('accountTypeLabel'), typeEl],
 		].forEach(function (pair) {
 			card.appendChild(
 				h('div', { className: 'smlv-field' }, [
@@ -343,20 +363,18 @@
 		var submitBtn = h(
 			'button',
 			{ className: 'smlv-btn' },
-			'Create Account',
+			t('createAccount'),
 		);
 		submitBtn.addEventListener('click', function () {
 			var email = emailEl.value.trim();
 			var first = firstEl.value.trim();
 			if (!email || !first) {
 				errBox.innerHTML = '';
-				errBox.appendChild(
-					alertBox('err', 'Email and first name are required.'),
-				);
+				errBox.appendChild(alertBox('err', t('emailFirstRequired')));
 				return;
 			}
 			submitBtn.disabled = true;
-			submitBtn.textContent = 'Creating…';
+			submitBtn.textContent = t('creating');
 			errBox.innerHTML = '';
 
 			api.post('/account/create', {
@@ -377,7 +395,7 @@
 					errBox.innerHTML = '';
 					errBox.appendChild(alertBox('err', e.message));
 					submitBtn.disabled = false;
-					submitBtn.textContent = 'Create Account';
+					submitBtn.textContent = t('createAccount');
 					cb.onError && cb.onError(e);
 				});
 		});
@@ -445,6 +463,7 @@
 		 */
 		deposit: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
+			var t = mkT(cfg.lang);
 			var selectedCurrency = null;
 			var walletData = null;
 
@@ -472,7 +491,7 @@
 
 			function renderForm(info, currencies) {
 				card.innerHTML = '';
-				card.appendChild(mkHeader('Deposit'));
+				card.appendChild(mkHeader(t('deposit')));
 
 				/* Currency selector */
 				var sel = h(
@@ -494,7 +513,7 @@
 						h(
 							'label',
 							{ className: 'smlv-label' },
-							'Select currency',
+							t('selectCurrency'),
 						),
 						sel,
 					]),
@@ -504,10 +523,10 @@
 					card.appendChild(
 						alertBox(
 							'info',
-							'Minimum deposit: ' +
-								info.min_amount +
-								'\u00a0' +
-								selectedCurrency.toUpperCase(),
+							t('minDeposit', {
+								amount: info.min_amount,
+								currency: selectedCurrency.toUpperCase(),
+							}),
 						),
 					);
 				}
@@ -525,11 +544,11 @@
 					var btn = h(
 						'button',
 						{ className: 'smlv-btn' },
-						'Get Deposit Address',
+						t('getDepositAddress'),
 					);
 					btn.addEventListener('click', function () {
 						btn.disabled = true;
-						btn.textContent = 'Loading…';
+						btn.textContent = t('loading');
 						api.get('/deposit/address', {
 							currency: selectedCurrency,
 						})
@@ -540,7 +559,7 @@
 							.catch(function (e) {
 								section.appendChild(alertBox('err', e.message));
 								btn.disabled = false;
-								btn.textContent = 'Get Deposit Address';
+								btn.textContent = t('getDepositAddress');
 							});
 					});
 					section.appendChild(btn);
@@ -548,10 +567,9 @@
 					section.appendChild(
 						alertBox(
 							'ok',
-							'Send ' +
-								selectedCurrency.toUpperCase() +
-								' to the address below. ' +
-								'The payment will be confirmed automatically.',
+							t('sendHint', {
+								currency: selectedCurrency.toUpperCase(),
+							}),
 						),
 					);
 
@@ -559,17 +577,21 @@
 					var cpyBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-sm' },
-						'Copy',
+						t('copy'),
 					);
 					cpyBtn.addEventListener('click', function () {
-						copyToClipboard(walletData.address, cpyBtn);
+						copyToClipboard(
+							walletData.address,
+							cpyBtn,
+							t('copied'),
+						);
 					});
 					section.appendChild(
 						h('div', { className: 'smlv-field' }, [
 							h(
 								'label',
 								{ className: 'smlv-label' },
-								'Wallet address',
+								t('walletAddress'),
 							),
 							h('div', { className: 'smlv-copy-box' }, [
 								h('span', {}, walletData.address),
@@ -584,17 +606,17 @@
 						var mBtn = h(
 							'button',
 							{ className: 'smlv-btn smlv-btn-sm' },
-							'Copy',
+							t('copy'),
 						);
 						mBtn.addEventListener('click', function () {
-							copyToClipboard(memo, mBtn);
+							copyToClipboard(memo, mBtn, t('copied'));
 						});
 						section.appendChild(
 							h('div', { className: 'smlv-field' }, [
 								h(
 									'label',
 									{ className: 'smlv-label' },
-									'Memo / Tag',
+									t('memoTag'),
 								),
 								h('div', { className: 'smlv-copy-box' }, [
 									h('span', {}, memo),
@@ -611,7 +633,7 @@
 							className: 'smlv-btn',
 							style: 'margin-top:12px',
 						},
-						"I've sent the payment",
+						t('sentPayment'),
 					);
 					doneBtn.addEventListener('click', function () {
 						var payload = {
@@ -635,6 +657,7 @@
 		 */
 		balance: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
+			var t = mkT(cfg.lang);
 
 			function renderBalances(res) {
 				var s = card.querySelector('.smlv-spin-wrap');
@@ -653,7 +676,7 @@
 						h(
 							'p',
 							{ style: 'color:var(--smlv-muted);font-size:14px' },
-							'No balance data yet.',
+							t('noBalance'),
 						),
 					);
 				} else {
@@ -681,7 +704,7 @@
 						h(
 							'p',
 							{ className: 'smlv-ts' },
-							'Updated: ' + fmtDate(res.data.updated_at),
+							t('updatedAt') + fmtDate(res.data.updated_at),
 						),
 					);
 				}
@@ -690,7 +713,7 @@
 			function doSync(syncBtn) {
 				if (syncBtn) {
 					syncBtn.disabled = true;
-					syncBtn.textContent = 'Syncing…';
+					syncBtn.textContent = t('syncing');
 				}
 				card.appendChild(spinner());
 				api.post('/balance/sync')
@@ -698,7 +721,7 @@
 						renderBalances(res);
 						if (syncBtn) {
 							syncBtn.disabled = false;
-							syncBtn.textContent = 'Sync';
+							syncBtn.textContent = t('sync');
 						}
 					})
 					.catch(function (e) {
@@ -707,7 +730,7 @@
 						card.appendChild(alertBox('err', e.message));
 						if (syncBtn) {
 							syncBtn.disabled = false;
-							syncBtn.textContent = 'Sync';
+							syncBtn.textContent = t('sync');
 						}
 						cb.onError && cb.onError(e);
 					});
@@ -718,12 +741,12 @@
 				var syncBtn = h(
 					'button',
 					{ className: 'smlv-btn smlv-btn-sm' },
-					'Sync',
+					t('sync'),
 				);
 				syncBtn.addEventListener('click', function () {
 					doSync(syncBtn);
 				});
-				card.appendChild(mkHeader('Balance', syncBtn));
+				card.appendChild(mkHeader(t('balance'), syncBtn));
 				card.appendChild(spinner());
 
 				api.get('/balance')
@@ -747,13 +770,14 @@
 		 */
 		transactions: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
+			var t = mkT(cfg.lang);
 			var page = 1;
 			var perPage = cfg.perPage || 10;
 			var total = 0;
 
 			function load() {
 				card.innerHTML = '';
-				card.appendChild(mkHeader('Transactions'));
+				card.appendChild(mkHeader(t('transactions')));
 				card.appendChild(spinner());
 
 				api.get('/transactions', { page: page, per_page: perPage })
@@ -774,7 +798,7 @@
 									{
 										style: 'color:var(--smlv-muted);font-size:14px',
 									},
-									'No transactions yet.',
+									t('noTransactions'),
 								),
 							);
 							cb.onReady && cb.onReady();
@@ -783,11 +807,11 @@
 
 						var thead = h('thead', {}, [
 							h('tr', {}, [
-								h('th', {}, 'Date'),
-								h('th', {}, 'Type'),
-								h('th', {}, 'Amount'),
-								h('th', {}, 'Currency'),
-								h('th', {}, 'Status'),
+								h('th', {}, t('colDate')),
+								h('th', {}, t('colType')),
+								h('th', {}, t('colAmount')),
+								h('th', {}, t('colCurrency')),
+								h('th', {}, t('colStatus')),
 							]),
 						]);
 
@@ -824,12 +848,12 @@
 							var prev = h(
 								'button',
 								{ className: 'smlv-btn smlv-btn-sm' },
-								'← Prev',
+								t('prevPage'),
 							);
 							var next = h(
 								'button',
 								{ className: 'smlv-btn smlv-btn-sm' },
-								'Next →',
+								t('nextPage'),
 							);
 							prev.disabled = page <= 1;
 							next.disabled = page >= pages;
@@ -844,10 +868,7 @@
 							card.appendChild(
 								h('div', { className: 'smlv-pgn' }, [
 									prev,
-									'Page\u00a0' +
-										page +
-										'\u00a0of\u00a0' +
-										pages,
+									t('pageOf', { page: page, total: pages }),
 									next,
 								]),
 							);
@@ -871,8 +892,9 @@
 		 */
 		management: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
+			var t = mkT(cfg.lang);
 			card.innerHTML = '';
-			card.appendChild(mkHeader('Account'));
+			card.appendChild(mkHeader(t('account')));
 			card.appendChild(spinner());
 
 			api.get('/account')
@@ -895,7 +917,7 @@
 					card.removeChild(card.lastChild);
 
 				var tabs = mkTabs(
-					['Overview', 'Edit', 'Danger Zone'],
+					[t('overview'), t('edit'), t('dangerZone')],
 					[renderOverviewPanel, renderEditPanel, renderDangerPanel],
 				);
 				card.appendChild(tabs.tabBar);
@@ -906,14 +928,17 @@
 				// ── Tab 1: Overview ─────────────────────────────────────────
 				function renderOverviewPanel(panel) {
 					var infoRows = [
-						['Reference', acc.reference || acc.account_reference],
-						['Email', acc.email],
-						['First name', acc.first_name],
-						['Last name', acc.last_name],
-						['Type', acc.account_type],
-						['Status', acc.status],
 						[
-							'Created',
+							t('reference'),
+							acc.reference || acc.account_reference,
+						],
+						[t('emailField'), acc.email],
+						[t('firstNameField'), acc.first_name],
+						[t('lastNameField'), acc.last_name],
+						[t('typeField'), acc.account_type],
+						[t('statusField'), acc.status],
+						[
+							t('createdField'),
 							acc.created_at ? fmtDate(acc.created_at) : null,
 						],
 					];
@@ -957,16 +982,16 @@
 						value: acc.email || '',
 					});
 					var typeEl = h('select', { className: 'smlv-select' }, [
-						h('option', { value: 'natural' }, 'Individual'),
-						h('option', { value: 'legal' }, 'Company'),
+						h('option', { value: 'natural' }, t('individualShort')),
+						h('option', { value: 'legal' }, t('companyShort')),
 					]);
 					if (acc.account_type === 'legal') typeEl.value = 'legal';
 
 					[
-						['First name', firstEl],
-						['Last name', lastEl],
-						['Email', emailEl],
-						['Account type', typeEl],
+						[t('firstNameField'), firstEl],
+						[t('lastNameField'), lastEl],
+						[t('emailField'), emailEl],
+						[t('accountTypeLabel'), typeEl],
 					].forEach(function (pair) {
 						panel.appendChild(
 							h('div', { className: 'smlv-field' }, [
@@ -986,11 +1011,11 @@
 					var saveBtn = h(
 						'button',
 						{ className: 'smlv-btn', style: 'margin-top:4px' },
-						'Save changes',
+						t('saveChanges'),
 					);
 					saveBtn.addEventListener('click', function () {
 						saveBtn.disabled = true;
-						saveBtn.textContent = 'Saving…';
+						saveBtn.textContent = t('saving');
 						msgBox.innerHTML = '';
 						api.patch('/account', {
 							first_name: firstEl.value.trim() || undefined,
@@ -1001,13 +1026,10 @@
 							.then(function (r) {
 								acc = r.data || acc;
 								msgBox.appendChild(
-									alertBox(
-										'ok',
-										'Account updated successfully.',
-									),
+									alertBox('ok', t('accountUpdated')),
 								);
 								saveBtn.disabled = false;
-								saveBtn.textContent = 'Save changes';
+								saveBtn.textContent = t('saveChanges');
 								cb.onSuccess &&
 									cb.onSuccess({
 										event: 'account_updated',
@@ -1017,7 +1039,7 @@
 							.catch(function (e) {
 								msgBox.appendChild(alertBox('err', e.message));
 								saveBtn.disabled = false;
-								saveBtn.textContent = 'Save changes';
+								saveBtn.textContent = t('saveChanges');
 								cb.onError && cb.onError(e);
 							});
 					});
@@ -1036,8 +1058,8 @@
 							'div',
 							{ className: 'smlv-danger-title' },
 							isActive
-								? 'Deactivate account'
-								: 'Reactivate account',
+								? t('deactivateTitle')
+								: t('reactivateTitle'),
 						),
 					);
 					closeSection.appendChild(
@@ -1045,8 +1067,8 @@
 							'div',
 							{ className: 'smlv-danger-desc' },
 							isActive
-								? 'Suspend this account. Deposits and transactions will be disabled. You can reactivate at any time.'
-								: 'Restore this account to active status.',
+								? t('deactivateDesc')
+								: t('reactivateDesc'),
 						),
 					);
 
@@ -1059,8 +1081,8 @@
 							'p',
 							{},
 							isActive
-								? 'Are you sure you want to deactivate this account?'
-								: 'Reactivate account and restore access?',
+								? t('confirmDeactivate')
+								: t('confirmReactivate'),
 						),
 					);
 					var closeErrBox = h('div', {});
@@ -1073,7 +1095,7 @@
 								(isActive ? 'smlv-btn-danger' : 'smlv-btn-ok'),
 							style: 'width:auto;padding:8px 16px',
 						},
-						isActive ? 'Deactivate' : 'Reactivate',
+						isActive ? t('deactivate') : t('reactivate'),
 					);
 					var cancelCloseBtn = h(
 						'button',
@@ -1081,7 +1103,7 @@
 							className: 'smlv-btn smlv-btn-ghost',
 							style: 'width:auto;padding:8px 16px',
 						},
-						'Cancel',
+						t('cancel'),
 					);
 					closeConfirm.appendChild(
 						h('div', { className: 'smlv-form-actions' }, [
@@ -1128,7 +1150,7 @@
 								'smlv-btn ' +
 								(isActive ? 'smlv-btn-danger' : 'smlv-btn-ok'),
 						},
-						isActive ? 'Deactivate account' : 'Reactivate account',
+						isActive ? t('deactivateTitle') : t('reactivateTitle'),
 					);
 					toggleCloseBtn.addEventListener('click', function () {
 						closeConfirm.style.display = 'block';
@@ -1145,14 +1167,14 @@
 						h(
 							'div',
 							{ className: 'smlv-danger-title' },
-							'Delete account',
+							t('deleteTitle'),
 						),
 					);
 					delSection.appendChild(
 						h(
 							'div',
 							{ className: 'smlv-danger-desc' },
-							'Permanently delete this account and all associated data. This action cannot be undone.',
+							t('deleteDesc'),
 						),
 					);
 
@@ -1160,13 +1182,7 @@
 						className: 'smlv-confirm',
 						style: 'display:none',
 					});
-					delConfirm.appendChild(
-						h(
-							'p',
-							{},
-							'Type DELETE to confirm permanent deletion:',
-						),
-					);
+					delConfirm.appendChild(h('p', {}, t('typeDeleteConfirm')));
 					var delInput = h('input', {
 						className: 'smlv-input',
 						type: 'text',
@@ -1181,7 +1197,7 @@
 							className: 'smlv-btn smlv-btn-danger',
 							style: 'width:auto;padding:8px 16px',
 						},
-						'Delete forever',
+						t('deleteForever'),
 					);
 					var cancelDelBtn = h(
 						'button',
@@ -1189,7 +1205,7 @@
 							className: 'smlv-btn smlv-btn-ghost',
 							style: 'width:auto;padding:8px 16px',
 						},
-						'Cancel',
+						t('cancel'),
 					);
 					delConfirm.appendChild(
 						h('div', { className: 'smlv-form-actions' }, [
@@ -1206,10 +1222,7 @@
 						if (delInput.value.trim() !== 'DELETE') {
 							delErrBox.innerHTML = '';
 							delErrBox.appendChild(
-								alertBox(
-									'err',
-									'Type DELETE in all caps to confirm.',
-								),
+								alertBox('err', t('typeDeleteCaps')),
 							);
 							return;
 						}
@@ -1239,7 +1252,7 @@
 					var showDelBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-danger' },
-						'Delete account',
+						t('deleteTitle'),
 					);
 					showDelBtn.addEventListener('click', function () {
 						delConfirm.style.display = 'block';

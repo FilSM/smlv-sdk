@@ -165,6 +165,7 @@ class SmlvWidgetGenerator
         $containerClass = $options['container_class'] ?? '';
 
         $jsConfig   = $this->buildJsConfig($token, $type, $options, '#' . $containerId);
+        $langTag    = $this->buildLangScriptTag($options['language'] ?? 'en');
         $scriptTag  = $this->buildScriptTag();
         $initScript = $this->buildInitScript($jsConfig);
 
@@ -175,6 +176,7 @@ class SmlvWidgetGenerator
 
         return implode("\n", [
             "<div {$divAttrs}></div>",
+            $langTag,
             $scriptTag,
             $initScript,
         ]);
@@ -192,6 +194,27 @@ class SmlvWidgetGenerator
     public function buildScriptTag(bool $defer = false): string
     {
         $src   = htmlspecialchars($this->getScriptUrl(), ENT_QUOTES, 'UTF-8');
+        $attrs = 'src="' . $src . '" crossorigin="anonymous"';
+        $attrs .= $defer ? ' defer' : ' async';
+        return '<script ' . $attrs . '></script>';
+    }
+
+    /**
+     * Returns a <script> tag loading the translations file for the given language.
+     * Automatically included by generateEmbed(); call manually if using buildScriptTag() separately.
+     *
+     * @param string $lang  Language code, e.g. 'en', 'ru', 'lv'
+     * @param bool   $defer
+     * @return string
+     */
+    public function buildLangScriptTag(string $lang = 'en', bool $defer = false): string
+    {
+        $langCode = preg_replace('/[^a-z0-9]/', '', strtolower($lang)) ?: 'en';
+        $src      = htmlspecialchars(
+            $this->cdnUrl . '/' . $this->scriptVersion . '/lang/' . $langCode . '.js',
+            ENT_QUOTES,
+            'UTF-8'
+        );
         $attrs = 'src="' . $src . '" crossorigin="anonymous"';
         $attrs .= $defer ? ' defer' : ' async';
         return '<script ' . $attrs . '></script>';
