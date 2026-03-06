@@ -21,7 +21,8 @@ window.SmlvWidgetI18n['lv'] = {
 	minDeposit: 'Min. depoz\u012bts: {amount}\u00a0{currency}',
 	getDepositAddress: 'Sa\u0146emt depoz\u012bta adresi',
 	loading: 'Iel\u0101d\u0113\u2026',
-	sendHint: 'Nos\u016bt\u012bsiet {currency} uz nor\u0101d\u012bto adresi. Maks\u0101jums tiks apstiprin\u0101ts autom\u0101tiski.',
+	sendHint:
+		'Nos\u016bt\u012bsiet {currency} uz nor\u0101d\u012bto adresi. Maks\u0101jums tiks apstiprin\u0101ts autom\u0101tiski.',
 	copy: 'Kop\u0113t',
 	copied: 'Nokop\u0113ts!',
 	walletAddress: 'Maka adrese',
@@ -58,17 +59,28 @@ window.SmlvWidgetI18n['lv'] = {
 	accountUpdated: 'Konts veiksm\u012bgi atjaunin\u0101ts.',
 	deactivateTitle: 'Deaktiviz\u0113t kontu',
 	reactivateTitle: 'Aktiviz\u0113t kontu',
-	deactivateDesc: 'Aptur\u0113t \u0161o kontu. Depoz\u012bti un dar\u012bjumi tiks atsp\u0113joti. J\u016bs varat aktiviz\u0113t to jebkur\u0101 laik\u0101.',
+	deactivateDesc:
+		'Aptur\u0113t \u0161o kontu. Depoz\u012bti un dar\u012bjumi tiks atsp\u0113joti. J\u016bs varat aktiviz\u0113t to jebkur\u0101 laik\u0101.',
 	reactivateDesc: 'Atjaunot konta akt\u012bvo statusu.',
-	confirmDeactivate: 'Vai tie\u0161\u0101m v\u0113laties deaktiviz\u0113t \u0161o kontu?',
+	confirmDeactivate:
+		'Vai tie\u0161\u0101m v\u0113laties deaktiviz\u0113t \u0161o kontu?',
 	confirmReactivate: 'Aktiviz\u0113t kontu un atjaunot piek\u013cuvi?',
 	deactivate: 'Deaktiviz\u0113t',
 	reactivate: 'Aktiviz\u0113t',
 	cancel: 'Atcelt',
 	deleteTitle: 'Dz\u0113st kontu',
-	deleteDesc: 'Neatgriezeniski dz\u0113st \u0161o kontu un visus saist\u012btos datus. \u0160o darb\u012bbu nevar atsaukt.',
-	typeDeleteConfirm: 'Ievadiet DELETE, lai apstiprin\u0101tu neatgriezenisku dz\u0113\u0161anu:',
+	deleteDesc:
+		'Neatgriezeniski dz\u0113st \u0161o kontu un visus saist\u012btos datus. \u0160o darb\u012bbu nevar atsaukt.',
+	typeDeleteConfirm:
+		'Ievadiet DELETE, lai apstiprin\u0101tu neatgriezenisku dz\u0113\u0161anu:',
 	deleteForever: 'Dz\u0113st neatgriezeniski',
-	typeDeleteCaps: 'Ievadiet DELETE ar lielajiem burtiem, lai apstiprin\u0101tu.',
+	typeDeleteCaps:
+		'Ievadiet DELETE ar lielajiem burtiem, lai apstiprin\u0101tu.',
 	accountDeleted: 'Konts tika neatgriezeniski dz\u0113sts.',
+	// ─── Vienotais konta logr\u012bks ───
+	smlvBalance: 'SMLV Bilance',
+	createSmlvAccount: 'Izveidot SMLV kontu',
+	pushUpdate: 'Atjaunin\u0101t no SaaS',
+	pushUpdating: 'Atjaunina\u2026',
+	profileSynced: 'Profils atjaunin\u0101ts no SaaS datiem.',
 };

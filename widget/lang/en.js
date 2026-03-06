@@ -21,7 +21,8 @@ window.SmlvWidgetI18n['en'] = {
 	minDeposit: 'Minimum deposit: {amount}\u00a0{currency}',
 	getDepositAddress: 'Get Deposit Address',
 	loading: 'Loading\u2026',
-	sendHint: 'Send {currency} to the address below. The payment will be confirmed automatically.',
+	sendHint:
+		'Send {currency} to the address below. The payment will be confirmed automatically.',
 	copy: 'Copy',
 	copied: 'Copied!',
 	walletAddress: 'Wallet address',
@@ -58,7 +59,8 @@ window.SmlvWidgetI18n['en'] = {
 	accountUpdated: 'Account updated successfully.',
 	deactivateTitle: 'Deactivate account',
 	reactivateTitle: 'Reactivate account',
-	deactivateDesc: 'Suspend this account. Deposits and transactions will be disabled. You can reactivate at any time.',
+	deactivateDesc:
+		'Suspend this account. Deposits and transactions will be disabled. You can reactivate at any time.',
 	reactivateDesc: 'Restore this account to active status.',
 	confirmDeactivate: 'Are you sure you want to deactivate this account?',
 	confirmReactivate: 'Reactivate account and restore access?',
@@ -66,9 +68,16 @@ window.SmlvWidgetI18n['en'] = {
 	reactivate: 'Reactivate',
 	cancel: 'Cancel',
 	deleteTitle: 'Delete account',
-	deleteDesc: 'Permanently delete this account and all associated data. This action cannot be undone.',
+	deleteDesc:
+		'Permanently delete this account and all associated data. This action cannot be undone.',
 	typeDeleteConfirm: 'Type DELETE to confirm permanent deletion:',
 	deleteForever: 'Delete forever',
 	typeDeleteCaps: 'Type DELETE in all caps to confirm.',
 	accountDeleted: 'Account has been permanently deleted.',
+	// ─── Unified account widget ───
+	smlvBalance: 'SMLV Balance',
+	createSmlvAccount: 'Create SMLV Account',
+	pushUpdate: 'Update from SaaS',
+	pushUpdating: 'Updating…',
+	profileSynced: 'Profile updated from SaaS data.',
 };

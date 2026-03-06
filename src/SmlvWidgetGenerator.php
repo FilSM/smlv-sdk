@@ -126,13 +126,52 @@ class SmlvWidgetGenerator
     }
 
     /**
+     * Unified account widget embed.
+     *
+     * Single widget for all subscriber interactions:
+     * - No SMLV account yet  → compact card with "Create SMLV Account" button.
+     *   If $options['prefill'] contains email + first_name, account is created
+     *   automatically on button click (no form required).
+     * - Account exists → 4-tab dashboard:
+     *     Tab 1 (default): SMLV Balance
+     *     Tab 2:          Transactions
+     *     Tab 3:          Overview + "Update from SaaS" button (pushes prefill/syncData)
+     *     Tab 4:          Danger Zone (deactivate, delete)
+     *
+     * Pass subscriber data via $options['prefill'] or $options['sync_data']:
+     *   'email', 'first_name', 'last_name', 'account_type'  ('natural'|'legal')
+     *
+     * @param string $externalSubscriberId  Unique subscriber entity ID in the SaaS system
+     * @param string $email                 Subscriber e-mail (also used as prefill.email)
+     * @param array  $options               Same keys as generateEmbed(); add sync_data for
+     *                                      the "Update" button payload
+     */
+    public function generateAccountWidget(
+        string $externalSubscriberId,
+        string $email = '',
+        array $options = []
+    ): string {
+        // Merge email into prefill so the widget can auto-create the account
+        if ($email && empty($options['prefill']['email'])) {
+            $options['prefill']['email'] = $email;
+        }
+        // sync_data → passed as cfg.syncData to JS (used by the "Update" button)
+        if (!empty($options['sync_data']) && is_array($options['sync_data'])) {
+            // Will appear as cfg.syncData in the JS config
+            $options['syncData'] = $options['sync_data'];
+            unset($options['sync_data']);
+        }
+        return $this->generateEmbed($externalSubscriberId, $email, 'account', $options);
+    }
+
+    /**
      * Core embed builder — generates container div + CDN script tag + inline init.
      *
      * @param string $externalSubscriberId  Unique subscriber entity ID in the SaaS system.
      *                                       One SaaS user may have several subscribers —
      *                                       pass the subscriber entity ID, not the user ID.
      * @param string $email
-     * @param string $type   deposit|balance|transactions|management
+     * @param string $type   deposit|balance|transactions|management|account
      * @param array  $options {
      *     @type string $theme           'light'|'dark' (default: 'light')
      *     @type string $language        BCP-47 tag, e.g. 'en', 'ru' (default: 'en')
@@ -308,6 +347,10 @@ class SmlvWidgetGenerator
         // Forward prefill data to the widget (pre-fills create-account form)
         if (!empty($options['prefill']) && is_array($options['prefill'])) {
             $config['prefill'] = $options['prefill'];
+        }
+        // Forward syncData to the widget (used by account renderer's "Update from SaaS" button)
+        if (!empty($options['syncData']) && is_array($options['syncData'])) {
+            $config['syncData'] = $options['syncData'];
         }
 
         return $config;
