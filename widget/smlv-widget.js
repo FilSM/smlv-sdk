@@ -1310,44 +1310,15 @@
 				card.innerHTML = '';
 				card.appendChild(mkHeader(t('smlvBalance')));
 				card.appendChild(alertBox('info', t('setupPrompt')));
-				var errBox = h('div', {});
-				card.appendChild(errBox);
 				var createBtn = h('button', { className: 'smlv-btn' }, t('createSmlvAccount'));
 				card.appendChild(createBtn);
 
 				createBtn.addEventListener('click', function () {
-					var prefill = cfg.prefill || {};
-					if (prefill.email && prefill.first_name) {
-						// Auto-create using eGram subscriber data вЂ” no form needed
-						createBtn.disabled = true;
-						createBtn.textContent = t('creating');
-						errBox.innerHTML = '';
-						api.post('/account/create', {
-							email: prefill.email,
-							first_name: prefill.first_name,
-							last_name: prefill.last_name || undefined,
-							account_type: prefill.account_type || 'natural',
-						})
-							.then(function (res) {
-								cb.onSuccess && cb.onSuccess({
-									event: 'account_created',
-									account: res.data,
-								});
-								renderTabs(res.data || {});
-							})
-							.catch(function (e) {
-								errBox.innerHTML = '';
-								errBox.appendChild(alertBox('err', e.message));
-								createBtn.disabled = false;
-								createBtn.textContent = t('createSmlvAccount');
-								cb.onError && cb.onError(e);
-							});
-					} else {
-						// Incomplete prefill вЂ” fall back to interactive form
-						renderCreateForm(card, api, cfg.prefill || {}, cb, function (acc) {
-							renderTabs(acc || {});
-						}, cfg.lang);
-					}
+					// Always show the create form pre-filled with subscriber data.
+					// The user must review and explicitly submit -- never auto-create.
+					renderCreateForm(card, api, cfg.prefill || {}, cb, function (acc) {
+						renderTabs(acc || {});
+					}, cfg.lang);
 				});
 			}
 
