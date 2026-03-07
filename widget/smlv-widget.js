@@ -1292,9 +1292,10 @@
 						cb.onReady && cb.onReady();
 						return;
 					}
-					var acc = (res.data && res.data.account)
-						? res.data.account
-						: (res.data || {});
+					var acc =
+						res.data && res.data.account
+							? res.data.account
+							: res.data || {};
 					renderTabs(acc);
 					cb.onReady && cb.onReady();
 				})
@@ -1310,15 +1311,26 @@
 				card.innerHTML = '';
 				card.appendChild(mkHeader(t('smlvBalance')));
 				card.appendChild(alertBox('info', t('setupPrompt')));
-				var createBtn = h('button', { className: 'smlv-btn' }, t('createSmlvAccount'));
+				var createBtn = h(
+					'button',
+					{ className: 'smlv-btn' },
+					t('createSmlvAccount'),
+				);
 				card.appendChild(createBtn);
 
 				createBtn.addEventListener('click', function () {
 					// Always show the create form pre-filled with subscriber data.
 					// The user must review and explicitly submit -- never auto-create.
-					renderCreateForm(card, api, cfg.prefill || {}, cb, function (acc) {
-						renderTabs(acc || {});
-					}, cfg.lang);
+					renderCreateForm(
+						card,
+						api,
+						cfg.prefill || {},
+						cb,
+						function (acc) {
+							renderTabs(acc || {});
+						},
+						cfg.lang,
+					);
 				});
 			}
 
@@ -1328,18 +1340,34 @@
 				card.appendChild(mkHeader(t('smlvBalance')));
 
 				var tabs = mkTabs(
-					[t('smlvBalance'), t('transactions'), t('overview'), t('dangerZone')],
-					[renderBalancePanel, renderTxPanel, renderOverviewPanel, renderDangerPanel],
+					[
+						t('smlvBalance'),
+						t('transactions'),
+						t('overview'),
+						t('dangerZone'),
+					],
+					[
+						renderBalancePanel,
+						renderTxPanel,
+						renderOverviewPanel,
+						renderDangerPanel,
+					],
 				);
 				card.appendChild(tabs.tabBar);
-				tabs.panels.forEach(function (p) { card.appendChild(p); });
+				tabs.panels.forEach(function (p) {
+					card.appendChild(p);
+				});
 
 				/* в”Ђ Tab 1: SMLV Balance в”Ђ */
 				function renderBalancePanel(panel) {
-					var syncBtn = h('button', {
-						className: 'smlv-btn smlv-btn-sm',
-						style: 'margin-bottom:12px',
-					}, t('sync'));
+					var syncBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-sm',
+							style: 'margin-bottom:12px',
+						},
+						t('sync'),
+					);
 					panel.appendChild(syncBtn);
 					panel.appendChild(spinner());
 
@@ -1353,21 +1381,49 @@
 						panel.querySelector('.smlv-alert') &&
 							panel.querySelector('.smlv-alert').remove();
 
-						var balances = res.data && res.data.balances ? res.data.balances : [];
+						var balances =
+							res.data && res.data.balances
+								? res.data.balances
+								: [];
 						if (!balances.length) {
-							panel.appendChild(h('p', { style: 'color:var(--smlv-muted);font-size:14px' }, t('noBalance')));
+							panel.appendChild(
+								h(
+									'p',
+									{
+										style: 'color:var(--smlv-muted);font-size:14px',
+									},
+									t('noBalance'),
+								),
+							);
 						} else {
 							var grid = h('div', { className: 'smlv-bal-grid' });
 							balances.forEach(function (b) {
-								grid.appendChild(h('div', { className: 'smlv-bal-card' }, [
-									h('div', { className: 'smlv-bal-cur' }, (b.currency || '').toUpperCase()),
-									h('div', { className: 'smlv-bal-amt' }, fmtAmt(b.amount)),
-								]));
+								grid.appendChild(
+									h('div', { className: 'smlv-bal-card' }, [
+										h(
+											'div',
+											{ className: 'smlv-bal-cur' },
+											(b.currency || '').toUpperCase(),
+										),
+										h(
+											'div',
+											{ className: 'smlv-bal-amt' },
+											fmtAmt(b.amount),
+										),
+									]),
+								);
 							});
 							panel.appendChild(grid);
 						}
 						if (res.data && res.data.updated_at) {
-							panel.appendChild(h('p', { className: 'smlv-ts' }, t('updatedAt') + fmtDate(res.data.updated_at)));
+							panel.appendChild(
+								h(
+									'p',
+									{ className: 'smlv-ts' },
+									t('updatedAt') +
+										fmtDate(res.data.updated_at),
+								),
+							);
 						}
 						syncBtn.disabled = false;
 						syncBtn.textContent = t('sync');
@@ -1403,42 +1459,69 @@
 
 				/* в”Ђ Tab 2: Transactions в”Ђ */
 				function renderTxPanel(panel) {
-					var txPage = 1;
+					var txPage  = 1;
+					var txSort  = 'created_at';
+					var txDir   = 'desc';
 					var txTotal = 0;
+
+					var COLS = [
+						{ key: 'created_at', label: t('colDate')     },
+						{ key: 'type',       label: t('colType')     },
+						{ key: 'amount',     label: t('colAmount')   },
+						{ key: null,         label: t('colCurrency') },
+						{ key: 'status',     label: t('colStatus')   },
+					];
+
 					function loadTx() {
 						panel.innerHTML = '';
 						panel.appendChild(spinner());
-						api.get('/transactions', { page: txPage, per_page: perPage })
+						api.get('/transactions', {
+							page: txPage,
+							per_page: perPage,
+							sort: txSort,
+							direction: txDir,
+						})
 							.then(function (res) {
 								var s = panel.querySelector('.smlv-spin-wrap');
 								if (s) s.remove();
 								var items = res.data && res.data.items ? res.data.items : [];
 								txTotal = res.data && res.data.total ? res.data.total : items.length;
+								var pages = Math.ceil(txTotal / perPage);
+
 								if (!items.length) {
 									panel.appendChild(h('p', { style: 'color:var(--smlv-muted);font-size:14px' }, t('noTransactions')));
 									return;
 								}
+
+								var theadRow = h('tr', {}, COLS.map(function (col) {
+									var isActive = col.key === txSort;
+									var ind = col.key ? (isActive ? (txDir === 'asc' ? ' \u25b2' : ' \u25bc') : ' \u25bd') : '';
+									var st = col.key ? ('cursor:pointer;user-select:none' + (isActive ? ';color:var(--smlv-accent)' : '')) : '';
+									var th = h('th', { style: st }, col.label + ind);
+									if (col.key) {
+										th.addEventListener('click', (function(k) { return function () {
+											if (txSort === k) { txDir = txDir === 'asc' ? 'desc' : 'asc'; }
+											else { txSort = k; txDir = 'desc'; }
+											txPage = 1; loadTx();
+										};})(col.key));
+									}
+									return th;
+								}));
+
+								var tbody = h('tbody', {}, items.map(function (tx) {
+									return h('tr', {}, [
+										h('td', {}, fmtDate(tx.created_at)),
+										h('td', {}, tx.type || '\u2014'),
+										h('td', {}, fmtAmt(tx.amount)),
+										h('td', {}, (tx.currency || '').toUpperCase()),
+										h('td', {}, badge(tx.status)),
+									]);
+								}));
+
 								panel.appendChild(h('div', { className: 'smlv-tbl-wrap' }, [
-									h('table', { className: 'smlv-tbl' }, [
-										h('thead', {}, [h('tr', {}, [
-											h('th', {}, t('colDate')),
-											h('th', {}, t('colType')),
-											h('th', {}, t('colAmount')),
-											h('th', {}, t('colCurrency')),
-											h('th', {}, t('colStatus')),
-										])]),
-										h('tbody', {}, items.map(function (tx) {
-											return h('tr', {}, [
-												h('td', {}, fmtDate(tx.created_at)),
-												h('td', {}, tx.type || 'вЂ”'),
-												h('td', {}, fmtAmt(tx.amount)),
-												h('td', {}, (tx.currency || '').toUpperCase()),
-												h('td', {}, badge(tx.status)),
-											]);
-										})),
-									]),
+									h('table', { className: 'smlv-tbl' }, [ h('thead', {}, theadRow), tbody ]),
 								]));
-								var pages = Math.ceil(txTotal / perPage);
+
 								if (pages > 1) {
 									var prev = h('button', { className: 'smlv-btn smlv-btn-sm' }, t('prevPage'));
 									var next = h('button', { className: 'smlv-btn smlv-btn-sm' }, t('nextPage'));
@@ -1448,7 +1531,7 @@
 									next.addEventListener('click', function () { txPage++; loadTx(); });
 									panel.appendChild(h('div', { className: 'smlv-pgn' }, [
 										prev,
-										t('pageOf', { page: txPage, total: pages }),
+										h('span', { style: 'line-height:2' }, t('pageOf', { page: txPage, total: pages })),
 										next,
 									]));
 								}
@@ -1466,30 +1549,52 @@
 				/* в”Ђ Tab 3: Overview + push-update button в”Ђ */
 				function renderOverviewPanel(panel) {
 					[
-						[t('reference'), acc.reference || acc.account_reference],
+						[
+							t('reference'),
+							acc.reference || acc.account_reference,
+						],
 						[t('emailField'), acc.email],
 						[t('firstNameField'), acc.first_name],
 						[t('lastNameField'), acc.last_name],
 						[t('typeField'), acc.account_type],
 						[t('statusField'), acc.status],
-						[t('createdField'), acc.created_at ? fmtDate(acc.created_at) : null],
+						[
+							t('createdField'),
+							acc.created_at ? fmtDate(acc.created_at) : null,
+						],
 					]
-						.filter(function (f) { return f[1]; })
+						.filter(function (f) {
+							return f[1];
+						})
 						.forEach(function (f) {
-							panel.appendChild(h('div', { className: 'smlv-row' }, [
-								h('span', { className: 'smlv-row-lbl' }, f[0]),
-								h('span', { className: 'smlv-row-val' }, String(f[1])),
-							]));
+							panel.appendChild(
+								h('div', { className: 'smlv-row' }, [
+									h(
+										'span',
+										{ className: 'smlv-row-lbl' },
+										f[0],
+									),
+									h(
+										'span',
+										{ className: 'smlv-row-val' },
+										String(f[1]),
+									),
+								]),
+							);
 						});
 
 					// "Update" button вЂ” pushes eGram subscriber data to SMLV without any form
 					var pushData = cfg.prefill || cfg.syncData || {};
 					if (Object.keys(pushData).length) {
 						var msgBox = h('div', {});
-						var updateBtn = h('button', {
-							className: 'smlv-btn',
-							style: 'margin-top:16px',
-						}, t('pushUpdate'));
+						var updateBtn = h(
+							'button',
+							{
+								className: 'smlv-btn',
+								style: 'margin-top:16px',
+							},
+							t('pushUpdate'),
+						);
 						updateBtn.addEventListener('click', function () {
 							updateBtn.disabled = true;
 							updateBtn.textContent = t('pushUpdating');
@@ -1497,13 +1602,21 @@
 							api.patch('/account', pushData)
 								.then(function (r) {
 									acc = r.data || acc;
-									msgBox.appendChild(alertBox('ok', t('profileSynced')));
+									msgBox.appendChild(
+										alertBox('ok', t('profileSynced')),
+									);
 									updateBtn.disabled = false;
 									updateBtn.textContent = t('pushUpdate');
-									cb.onSuccess && cb.onSuccess({ event: 'account_updated', account: acc });
+									cb.onSuccess &&
+										cb.onSuccess({
+											event: 'account_updated',
+											account: acc,
+										});
 								})
 								.catch(function (e) {
-									msgBox.appendChild(alertBox('err', e.message));
+									msgBox.appendChild(
+										alertBox('err', e.message),
+									);
 									updateBtn.disabled = false;
 									updateBtn.textContent = t('pushUpdate');
 									cb.onError && cb.onError(e);
@@ -1516,50 +1629,110 @@
 
 				/* в”Ђ Tab 4: Danger Zone в”Ђ */
 				function renderDangerPanel(panel) {
-					var isActive = acc.status === 'active' || acc.status === 'Active';
+					var isActive =
+						acc.status === 'active' || acc.status === 'Active';
 
 					/* Close / Reactivate */
 					var closeSection = h('div', { className: 'smlv-danger' });
-					closeSection.appendChild(h('div', { className: 'smlv-danger-title' }, isActive ? t('deactivateTitle') : t('reactivateTitle')));
-					closeSection.appendChild(h('div', { className: 'smlv-danger-desc' }, isActive ? t('deactivateDesc') : t('reactivateDesc')));
-					var closeConfirm = h('div', { className: 'smlv-confirm', style: 'display:none' });
-					closeConfirm.appendChild(h('p', {}, isActive ? t('confirmDeactivate') : t('confirmReactivate')));
+					closeSection.appendChild(
+						h(
+							'div',
+							{ className: 'smlv-danger-title' },
+							isActive
+								? t('deactivateTitle')
+								: t('reactivateTitle'),
+						),
+					);
+					closeSection.appendChild(
+						h(
+							'div',
+							{ className: 'smlv-danger-desc' },
+							isActive
+								? t('deactivateDesc')
+								: t('reactivateDesc'),
+						),
+					);
+					var closeConfirm = h('div', {
+						className: 'smlv-confirm',
+						style: 'display:none',
+					});
+					closeConfirm.appendChild(
+						h(
+							'p',
+							{},
+							isActive
+								? t('confirmDeactivate')
+								: t('confirmReactivate'),
+						),
+					);
 					var closeErrBox = h('div', {});
 					closeConfirm.appendChild(closeErrBox);
-					var confirmCloseBtn = h('button', {
-						className: 'smlv-btn ' + (isActive ? 'smlv-btn-danger' : 'smlv-btn-ok'),
-						style: 'width:auto;padding:8px 16px',
-					}, isActive ? t('deactivate') : t('reactivate'));
-					var cancelCloseBtn = h('button', {
-						className: 'smlv-btn smlv-btn-ghost',
-						style: 'width:auto;padding:8px 16px',
-					}, t('cancel'));
-					closeConfirm.appendChild(h('div', { className: 'smlv-form-actions' }, [cancelCloseBtn, confirmCloseBtn]));
-					cancelCloseBtn.addEventListener('click', function () { closeConfirm.style.display = 'none'; });
+					var confirmCloseBtn = h(
+						'button',
+						{
+							className:
+								'smlv-btn ' +
+								(isActive ? 'smlv-btn-danger' : 'smlv-btn-ok'),
+							style: 'width:auto;padding:8px 16px',
+						},
+						isActive ? t('deactivate') : t('reactivate'),
+					);
+					var cancelCloseBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-ghost',
+							style: 'width:auto;padding:8px 16px',
+						},
+						t('cancel'),
+					);
+					closeConfirm.appendChild(
+						h('div', { className: 'smlv-form-actions' }, [
+							cancelCloseBtn,
+							confirmCloseBtn,
+						]),
+					);
+					cancelCloseBtn.addEventListener('click', function () {
+						closeConfirm.style.display = 'none';
+					});
 					confirmCloseBtn.addEventListener('click', function () {
 						confirmCloseBtn.disabled = true;
 						closeErrBox.innerHTML = '';
-						var method = isActive ? api.post('/account/close', {}) : api.post('/account/reactivate', {});
+						var method = isActive
+							? api.post('/account/close', {})
+							: api.post('/account/reactivate', {});
 						method
 							.then(function (r) {
 								acc = r.data || acc;
 								closeConfirm.style.display = 'none';
 								renderTabs(acc);
-								cb.onSuccess && cb.onSuccess({
-									event: isActive ? 'account_closed' : 'account_reactivated',
-									account: acc,
-								});
+								cb.onSuccess &&
+									cb.onSuccess({
+										event: isActive
+											? 'account_closed'
+											: 'account_reactivated',
+										account: acc,
+									});
 							})
 							.catch(function (e) {
-								closeErrBox.appendChild(alertBox('err', e.message));
+								closeErrBox.appendChild(
+									alertBox('err', e.message),
+								);
 								confirmCloseBtn.disabled = false;
 								cb.onError && cb.onError(e);
 							});
 					});
-					var toggleCloseBtn = h('button', {
-						className: 'smlv-btn ' + (isActive ? 'smlv-btn-danger' : 'smlv-btn-ok'),
-					}, isActive ? t('deactivateTitle') : t('reactivateTitle'));
-					toggleCloseBtn.addEventListener('click', function () { closeConfirm.style.display = 'block'; });
+					var toggleCloseBtn = h(
+						'button',
+						{
+							className:
+								'smlv-btn ' +
+								(isActive ? 'smlv-btn-danger' : 'smlv-btn-ok'),
+						},
+						isActive ? t('deactivateTitle') : t('reactivateTitle'),
+					);
+					toggleCloseBtn.addEventListener('click', function () {
+						closeConfirm.style.display = 'block';
+					});
 					closeSection.appendChild(toggleCloseBtn);
 					closeSection.appendChild(closeConfirm);
 					panel.appendChild(closeSection);
@@ -1567,28 +1740,65 @@
 
 					/* Delete */
 					var delSection = h('div', { className: 'smlv-danger' });
-					delSection.appendChild(h('div', { className: 'smlv-danger-title' }, t('deleteTitle')));
-					delSection.appendChild(h('div', { className: 'smlv-danger-desc' }, t('deleteDesc')));
-					var delConfirm = h('div', { className: 'smlv-confirm', style: 'display:none' });
+					delSection.appendChild(
+						h(
+							'div',
+							{ className: 'smlv-danger-title' },
+							t('deleteTitle'),
+						),
+					);
+					delSection.appendChild(
+						h(
+							'div',
+							{ className: 'smlv-danger-desc' },
+							t('deleteDesc'),
+						),
+					);
+					var delConfirm = h('div', {
+						className: 'smlv-confirm',
+						style: 'display:none',
+					});
 					delConfirm.appendChild(h('p', {}, t('typeDeleteConfirm')));
-					var delInput = h('input', { className: 'smlv-input', type: 'text', placeholder: 'DELETE' });
+					var delInput = h('input', {
+						className: 'smlv-input',
+						type: 'text',
+						placeholder: 'DELETE',
+					});
 					delConfirm.appendChild(delInput);
 					var delErrBox = h('div', {});
 					delConfirm.appendChild(delErrBox);
-					var confirmDelBtn = h('button', {
-						className: 'smlv-btn smlv-btn-danger',
-						style: 'width:auto;padding:8px 16px',
-					}, t('deleteForever'));
-					var cancelDelBtn = h('button', {
-						className: 'smlv-btn smlv-btn-ghost',
-						style: 'width:auto;padding:8px 16px',
-					}, t('cancel'));
-					delConfirm.appendChild(h('div', { className: 'smlv-form-actions' }, [cancelDelBtn, confirmDelBtn]));
-					cancelDelBtn.addEventListener('click', function () { delInput.value = ''; delConfirm.style.display = 'none'; });
+					var confirmDelBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-danger',
+							style: 'width:auto;padding:8px 16px',
+						},
+						t('deleteForever'),
+					);
+					var cancelDelBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-ghost',
+							style: 'width:auto;padding:8px 16px',
+						},
+						t('cancel'),
+					);
+					delConfirm.appendChild(
+						h('div', { className: 'smlv-form-actions' }, [
+							cancelDelBtn,
+							confirmDelBtn,
+						]),
+					);
+					cancelDelBtn.addEventListener('click', function () {
+						delInput.value = '';
+						delConfirm.style.display = 'none';
+					});
 					confirmDelBtn.addEventListener('click', function () {
 						if (delInput.value.trim() !== 'DELETE') {
 							delErrBox.innerHTML = '';
-							delErrBox.appendChild(alertBox('err', t('typeDeleteCaps')));
+							delErrBox.appendChild(
+								alertBox('err', t('typeDeleteCaps')),
+							);
 							return;
 						}
 						confirmDelBtn.disabled = true;
@@ -1596,17 +1806,28 @@
 						api.del('/account')
 							.then(function () {
 								card.innerHTML = '';
-								card.appendChild(alertBox('ok', t('accountDeleted')));
-								cb.onSuccess && cb.onSuccess({ event: 'account_deleted' });
+								card.appendChild(
+									alertBox('ok', t('accountDeleted')),
+								);
+								cb.onSuccess &&
+									cb.onSuccess({ event: 'account_deleted' });
 							})
 							.catch(function (e) {
-								delErrBox.appendChild(alertBox('err', e.message));
+								delErrBox.appendChild(
+									alertBox('err', e.message),
+								);
 								confirmDelBtn.disabled = false;
 								cb.onError && cb.onError(e);
 							});
 					});
-					var showDelBtn = h('button', { className: 'smlv-btn smlv-btn-danger' }, t('deleteTitle'));
-					showDelBtn.addEventListener('click', function () { delConfirm.style.display = 'block'; });
+					var showDelBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-danger' },
+						t('deleteTitle'),
+					);
+					showDelBtn.addEventListener('click', function () {
+						delConfirm.style.display = 'block';
+					});
 					delSection.appendChild(showDelBtn);
 					delSection.appendChild(delConfirm);
 					panel.appendChild(delSection);
