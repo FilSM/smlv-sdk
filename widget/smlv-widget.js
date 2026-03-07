@@ -303,8 +303,8 @@
 	function fmtAmt(val) {
 		var n = parseFloat(val || 0);
 		if (isNaN(n)) return '0.00000000';
-		var sign = n >= 0 ? '+' : '';
-		return sign + n.toFixed(8);
+		var abs = Math.abs(n).toFixed(8);
+		return n < 0 ? '-' + abs : '+' + abs;
 	}
 
 	// ─── Account resolution ─────────────────────────────────────────────────────
