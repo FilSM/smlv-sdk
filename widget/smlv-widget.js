@@ -1657,8 +1657,12 @@
 												'td',
 												{},
 												tx.type
-													? t('txType_' + tx.type) ||
-															tx.type
+													? (function (k) {
+															var tr = t('txType_' + k);
+															return tr === 'txType_' + k
+																? k.charAt(0).toUpperCase() + k.slice(1)
+																: tr;
+													  })(tx.type)
 													: '\u2014',
 											),
 											h('td', {}, fmtAmt(tx.amount)),

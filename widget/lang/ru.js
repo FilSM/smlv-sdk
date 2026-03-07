@@ -65,7 +65,8 @@ window.SmlvWidgetI18n['ru'] = {
 	filterDateTo: '\u041f\u043e',
 	filterReset: '\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c',
 	allOption: '\u0412\u0441\u0435',
-	txType_deposit: '\u041f\u043e\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u0435',
+	txType_deposit:
+		'\u041f\u043e\u043f\u043e\u043b\u043d\u0435\u043d\u0438\u0435',
 	txType_withdrawal: '\u0421\u043d\u044f\u0442\u0438\u0435',
 	txType_transfer: '\u041f\u0435\u0440\u0435\u0432\u043e\u0434',
 	txType_fee: '\u041a\u043e\u043c\u0438\u0441\u0441\u0438\u044f',
