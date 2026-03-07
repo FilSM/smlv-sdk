@@ -1287,6 +1287,11 @@
 				.then(function (res) {
 					var s = card.querySelector('.smlv-spin-wrap');
 					if (s) s.remove();
+					if (!res.found) {
+						renderSetupPrompt();
+						cb.onReady && cb.onReady();
+						return;
+					}
 					var acc = (res.data && res.data.account)
 						? res.data.account
 						: (res.data || {});
@@ -1296,13 +1301,8 @@
 				.catch(function (e) {
 					var s = card.querySelector('.smlv-spin-wrap');
 					if (s) s.remove();
-					if (e.code === 404) {
-						renderSetupPrompt();
-						cb.onReady && cb.onReady();
-					} else {
-						card.appendChild(alertBox('err', e.message));
-						cb.onError && cb.onError(e);
-					}
+					card.appendChild(alertBox('err', e.message));
+					cb.onError && cb.onError(e);
 				});
 
 			/* в”Ђв”Ђ No SMLV account: single "Create" button в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */
