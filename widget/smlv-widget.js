@@ -93,6 +93,13 @@
 		'.smlv-row-val{font-weight:600;}',
 		/* Paginator */
 		'.smlv-pgn{display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-size:13px;color:var(--smlv-muted);}',
+		/* Filter bar */
+		'.smlv-fltr{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:16px;padding:10px 12px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);}',
+		'.smlv-fltr label{font-size:11px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;letter-spacing:.05em;display:flex;flex-direction:column;gap:4px;}',
+		'.smlv-fltr select,.smlv-fltr input[type=date]{padding:5px 8px;font-size:13px;background:var(--smlv-bg);border:1px solid var(--smlv-border);border-radius:calc(var(--smlv-r) - 2px);color:var(--smlv-text);height:32px;min-width:100px;}',
+		'.smlv-fltr-rst{align-self:flex-end;}',
+		'.smlv-fltr-active{border-color:var(--smlv-accent)!important;color:var(--smlv-accent)!important;}',
+
 		'.smlv-ts{font-size:12px;color:var(--smlv-muted);margin-top:8px;}',
 		/* Tabs */
 		'.smlv-tabs{display:flex;gap:2px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:3px;margin-bottom:20px;}',
@@ -1459,10 +1466,14 @@
 
 				/* в”Ђ Tab 2: Transactions в”Ђ */
 				function renderTxPanel(panel) {
-					var txPage  = 1;
-					var txSort  = 'created_at';
-					var txDir   = 'desc';
-					var txTotal = 0;
+					var txPage     = 1;
+					var txSort     = 'created_at';
+					var txDir      = 'desc';
+					var txTotal    = 0;
+					var txType     = '';
+					var txStatus   = '';
+					var txDateFrom = '';
+					var txDateTo   = '';
 
 					var COLS = [
 						{ key: 'created_at', label: t('colDate')     },
@@ -1472,24 +1483,47 @@
 						{ key: 'status',     label: t('colStatus')   },
 					];
 
+					// Filter bar
+					var selType   = document.createElement('select');
+					var selStatus = document.createElement('select');
+					var inpFrom   = document.createElement('input');
+					var inpTo     = document.createElement('input');
+					inpFrom.type = 'date'; inpTo.type = 'date';
+					[['', t('allOption')],['deposit', t('txType_deposit')],['withdrawal', t('txType_withdrawal')],['transfer', t('txType_transfer')],['fee', t('txType_fee')],['refund', t('txType_refund')],['bonus', t('txType_bonus')],['adjustment', t('txType_adjustment')]].forEach(function(o){var e=document.createElement('option');e.value=o[0];e.textContent=o[1];selType.appendChild(e);});
+					[['', t('allOption')],['pending', t('txSt_pending')],['completed', t('txSt_completed')],['failed', t('txSt_failed')],['cancelled', t('txSt_cancelled')]].forEach(function(o){var e=document.createElement('option');e.value=o[0];e.textContent=o[1];selStatus.appendChild(e);});
+					function onFlt(){txType=selType.value;txStatus=selStatus.value;txDateFrom=inpFrom.value;txDateTo=inpTo.value;txPage=1;loadTx();}
+					selType.addEventListener('change',onFlt);selStatus.addEventListener('change',onFlt);
+					inpFrom.addEventListener('change',onFlt);inpTo.addEventListener('change',onFlt);
+					var rstBtn=h('button',{className:'smlv-btn smlv-btn-sm smlv-fltr-rst'},t('filterReset'));
+					rstBtn.addEventListener('click',function(){selType.value='';selStatus.value='';inpFrom.value='';inpTo.value='';txType='';txStatus='';txDateFrom='';txDateTo='';txPage=1;loadTx();});
+					panel.appendChild(h('div',{className:'smlv-fltr'},[
+						h('label',{},[t('filterType'),selType]),
+						h('label',{},[t('filterStatus'),selStatus]),
+						h('label',{},[t('filterDateFrom'),inpFrom]),
+						h('label',{},[t('filterDateTo'),inpTo]),
+						rstBtn,
+					]));
+					var listEl=document.createElement('div');
+					panel.appendChild(listEl);
+
 					function loadTx() {
-						panel.innerHTML = '';
-						panel.appendChild(spinner());
-						api.get('/transactions', {
-							page: txPage,
-							per_page: perPage,
-							sort: txSort,
-							direction: txDir,
-						})
+						listEl.innerHTML = '';
+						listEl.appendChild(spinner());
+						var params={page:txPage,per_page:perPage,sort:txSort,direction:txDir};
+						if(txType)     params.type      = txType;
+						if(txStatus)   params.status    = txStatus;
+						if(txDateFrom) params.date_from = txDateFrom;
+						if(txDateTo)   params.date_to   = txDateTo;
+						api.get('/transactions', params)
 							.then(function (res) {
-								var s = panel.querySelector('.smlv-spin-wrap');
+								var s = listEl.querySelector('.smlv-spin-wrap');
 								if (s) s.remove();
 								var items = res.data && res.data.items ? res.data.items : [];
 								txTotal = res.data && res.data.total ? res.data.total : items.length;
 								var pages = Math.ceil(txTotal / perPage);
 
 								if (!items.length) {
-									panel.appendChild(h('p', { style: 'color:var(--smlv-muted);font-size:14px' }, t('noTransactions')));
+									listEl.appendChild(h('p', { style: 'color:var(--smlv-muted);font-size:14px' }, t('noTransactions')));
 									return;
 								}
 
@@ -1511,14 +1545,14 @@
 								var tbody = h('tbody', {}, items.map(function (tx) {
 									return h('tr', {}, [
 										h('td', {}, fmtDate(tx.created_at)),
-										h('td', {}, tx.type || '\u2014'),
+										h('td', {}, tx.type ? (t('txType_'+tx.type) || tx.type) : '\u2014'),
 										h('td', {}, fmtAmt(tx.amount)),
 										h('td', {}, (tx.currency || '').toUpperCase()),
 										h('td', {}, badge(tx.status)),
 									]);
 								}));
 
-								panel.appendChild(h('div', { className: 'smlv-tbl-wrap' }, [
+								listEl.appendChild(h('div', { className: 'smlv-tbl-wrap' }, [
 									h('table', { className: 'smlv-tbl' }, [ h('thead', {}, theadRow), tbody ]),
 								]));
 
@@ -1529,7 +1563,7 @@
 									next.disabled = txPage >= pages;
 									prev.addEventListener('click', function () { txPage--; loadTx(); });
 									next.addEventListener('click', function () { txPage++; loadTx(); });
-									panel.appendChild(h('div', { className: 'smlv-pgn' }, [
+									listEl.appendChild(h('div', { className: 'smlv-pgn' }, [
 										prev,
 										h('span', { style: 'line-height:2' }, t('pageOf', { page: txPage, total: pages })),
 										next,
@@ -1537,9 +1571,9 @@
 								}
 							})
 							.catch(function (e) {
-								var s = panel.querySelector('.smlv-spin-wrap');
+								var s = listEl.querySelector('.smlv-spin-wrap');
 								if (s) s.remove();
-								panel.appendChild(alertBox('err', e.message));
+								listEl.appendChild(alertBox('err', e.message));
 								cb.onError && cb.onError(e);
 							});
 					}
