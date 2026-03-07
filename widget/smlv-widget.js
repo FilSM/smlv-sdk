@@ -302,7 +302,9 @@
 
 	function fmtAmt(val) {
 		var n = parseFloat(val || 0);
-		return isNaN(n) ? '0' : n.toFixed(8).replace(/\.?0+$/, '');
+		if (isNaN(n)) return '0.00000000';
+		var sign = n >= 0 ? '+' : '';
+		return sign + n.toFixed(8);
 	}
 
 	// ─── Account resolution ─────────────────────────────────────────────────────
@@ -1466,108 +1468,256 @@
 
 				/* в”Ђ Tab 2: Transactions в”Ђ */
 				function renderTxPanel(panel) {
-					var txPage     = 1;
-					var txSort     = 'created_at';
-					var txDir      = 'desc';
-					var txTotal    = 0;
-					var txType     = '';
-					var txStatus   = '';
+					var txPage = 1;
+					var txSort = 'created_at';
+					var txDir = 'desc';
+					var txTotal = 0;
+					var txType = '';
+					var txStatus = '';
 					var txDateFrom = '';
-					var txDateTo   = '';
+					var txDateTo = '';
 
 					var COLS = [
-						{ key: 'created_at', label: t('colDate')     },
-						{ key: 'type',       label: t('colType')     },
-						{ key: 'amount',     label: t('colAmount')   },
-						{ key: null,         label: t('colCurrency') },
-						{ key: 'status',     label: t('colStatus')   },
+						{ key: 'created_at', label: t('colDate') },
+						{ key: 'type', label: t('colType') },
+						{ key: 'amount', label: t('colAmount') },
+						{ key: null, label: t('colCurrency') },
+						{ key: 'status', label: t('colStatus') },
 					];
 
 					// Filter bar
-					var selType   = document.createElement('select');
+					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
-					var inpFrom   = document.createElement('input');
-					var inpTo     = document.createElement('input');
-					inpFrom.type = 'date'; inpTo.type = 'date';
-					[['', t('allOption')],['deposit', t('txType_deposit')],['withdrawal', t('txType_withdrawal')],['transfer', t('txType_transfer')],['fee', t('txType_fee')],['refund', t('txType_refund')],['bonus', t('txType_bonus')],['adjustment', t('txType_adjustment')]].forEach(function(o){var e=document.createElement('option');e.value=o[0];e.textContent=o[1];selType.appendChild(e);});
-					[['', t('allOption')],['pending', t('txSt_pending')],['completed', t('txSt_completed')],['failed', t('txSt_failed')],['cancelled', t('txSt_cancelled')]].forEach(function(o){var e=document.createElement('option');e.value=o[0];e.textContent=o[1];selStatus.appendChild(e);});
-					function onFlt(){txType=selType.value;txStatus=selStatus.value;txDateFrom=inpFrom.value;txDateTo=inpTo.value;txPage=1;loadTx();}
-					selType.addEventListener('change',onFlt);selStatus.addEventListener('change',onFlt);
-					inpFrom.addEventListener('change',onFlt);inpTo.addEventListener('change',onFlt);
-					var rstBtn=h('button',{className:'smlv-btn smlv-btn-sm smlv-fltr-rst'},t('filterReset'));
-					rstBtn.addEventListener('click',function(){selType.value='';selStatus.value='';inpFrom.value='';inpTo.value='';txType='';txStatus='';txDateFrom='';txDateTo='';txPage=1;loadTx();});
-					panel.appendChild(h('div',{className:'smlv-fltr'},[
-						h('label',{},[t('filterType'),selType]),
-						h('label',{},[t('filterStatus'),selStatus]),
-						h('label',{},[t('filterDateFrom'),inpFrom]),
-						h('label',{},[t('filterDateTo'),inpTo]),
-						rstBtn,
-					]));
-					var listEl=document.createElement('div');
+					var inpFrom = document.createElement('input');
+					var inpTo = document.createElement('input');
+					inpFrom.type = 'date';
+					inpTo.type = 'date';
+					[
+						['', t('allOption')],
+						['deposit', t('txType_deposit')],
+						['withdrawal', t('txType_withdrawal')],
+						['transfer', t('txType_transfer')],
+						['fee', t('txType_fee')],
+						['refund', t('txType_refund')],
+						['bonus', t('txType_bonus')],
+						['adjustment', t('txType_adjustment')],
+					].forEach(function (o) {
+						var e = document.createElement('option');
+						e.value = o[0];
+						e.textContent = o[1];
+						selType.appendChild(e);
+					});
+					[
+						['', t('allOption')],
+						['pending', t('txSt_pending')],
+						['completed', t('txSt_completed')],
+						['failed', t('txSt_failed')],
+						['cancelled', t('txSt_cancelled')],
+					].forEach(function (o) {
+						var e = document.createElement('option');
+						e.value = o[0];
+						e.textContent = o[1];
+						selStatus.appendChild(e);
+					});
+					function onFlt() {
+						txType = selType.value;
+						txStatus = selStatus.value;
+						txDateFrom = inpFrom.value;
+						txDateTo = inpTo.value;
+						txPage = 1;
+						loadTx();
+					}
+					selType.addEventListener('change', onFlt);
+					selStatus.addEventListener('change', onFlt);
+					inpFrom.addEventListener('change', onFlt);
+					inpTo.addEventListener('change', onFlt);
+					var rstBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
+						t('filterReset'),
+					);
+					rstBtn.addEventListener('click', function () {
+						selType.value = '';
+						selStatus.value = '';
+						inpFrom.value = '';
+						inpTo.value = '';
+						txType = '';
+						txStatus = '';
+						txDateFrom = '';
+						txDateTo = '';
+						txPage = 1;
+						loadTx();
+					});
+					panel.appendChild(
+						h('div', { className: 'smlv-fltr' }, [
+							h('label', {}, [t('filterType'), selType]),
+							h('label', {}, [t('filterStatus'), selStatus]),
+							h('label', {}, [t('filterDateFrom'), inpFrom]),
+							h('label', {}, [t('filterDateTo'), inpTo]),
+							rstBtn,
+						]),
+					);
+					var listEl = document.createElement('div');
 					panel.appendChild(listEl);
 
 					function loadTx() {
 						listEl.innerHTML = '';
 						listEl.appendChild(spinner());
-						var params={page:txPage,per_page:perPage,sort:txSort,direction:txDir};
-						if(txType)     params.type      = txType;
-						if(txStatus)   params.status    = txStatus;
-						if(txDateFrom) params.date_from = txDateFrom;
-						if(txDateTo)   params.date_to   = txDateTo;
+						var params = {
+							page: txPage,
+							per_page: perPage,
+							sort: txSort,
+							direction: txDir,
+						};
+						if (txType) params.type = txType;
+						if (txStatus) params.status = txStatus;
+						if (txDateFrom) params.date_from = txDateFrom;
+						if (txDateTo) params.date_to = txDateTo;
 						api.get('/transactions', params)
 							.then(function (res) {
 								var s = listEl.querySelector('.smlv-spin-wrap');
 								if (s) s.remove();
-								var items = res.data && res.data.items ? res.data.items : [];
-								txTotal = res.data && res.data.total ? res.data.total : items.length;
+								var items =
+									res.data && res.data.items
+										? res.data.items
+										: [];
+								txTotal =
+									res.data && res.data.total
+										? res.data.total
+										: items.length;
 								var pages = Math.ceil(txTotal / perPage);
 
 								if (!items.length) {
-									listEl.appendChild(h('p', { style: 'color:var(--smlv-muted);font-size:14px' }, t('noTransactions')));
+									listEl.appendChild(
+										h(
+											'p',
+											{
+												style: 'color:var(--smlv-muted);font-size:14px',
+											},
+											t('noTransactions'),
+										),
+									);
 									return;
 								}
 
-								var theadRow = h('tr', {}, COLS.map(function (col) {
-									var isActive = col.key === txSort;
-									var ind = col.key ? (isActive ? (txDir === 'asc' ? ' \u25b2' : ' \u25bc') : ' \u25bd') : '';
-									var st = col.key ? ('cursor:pointer;user-select:none' + (isActive ? ';color:var(--smlv-accent)' : '')) : '';
-									var th = h('th', { style: st }, col.label + ind);
-									if (col.key) {
-										th.addEventListener('click', (function(k) { return function () {
-											if (txSort === k) { txDir = txDir === 'asc' ? 'desc' : 'asc'; }
-											else { txSort = k; txDir = 'desc'; }
-											txPage = 1; loadTx();
-										};})(col.key));
-									}
-									return th;
-								}));
+								var theadRow = h(
+									'tr',
+									{},
+									COLS.map(function (col) {
+										var isActive = col.key === txSort;
+										var ind = col.key
+											? isActive
+												? txDir === 'asc'
+													? ' \u25b2'
+													: ' \u25bc'
+												: ' \u25bd'
+											: '';
+										var st = col.key
+											? 'cursor:pointer;user-select:none' +
+												(isActive
+													? ';color:var(--smlv-accent)'
+													: '')
+											: '';
+										var th = h(
+											'th',
+											{ style: st },
+											col.label + ind,
+										);
+										if (col.key) {
+											th.addEventListener(
+												'click',
+												(function (k) {
+													return function () {
+														if (txSort === k) {
+															txDir =
+																txDir === 'asc'
+																	? 'desc'
+																	: 'asc';
+														} else {
+															txSort = k;
+															txDir = 'desc';
+														}
+														txPage = 1;
+														loadTx();
+													};
+												})(col.key),
+											);
+										}
+										return th;
+									}),
+								);
 
-								var tbody = h('tbody', {}, items.map(function (tx) {
-									return h('tr', {}, [
-										h('td', {}, fmtDate(tx.created_at)),
-										h('td', {}, tx.type ? (t('txType_'+tx.type) || tx.type) : '\u2014'),
-										h('td', {}, fmtAmt(tx.amount)),
-										h('td', {}, (tx.currency || '').toUpperCase()),
-										h('td', {}, badge(tx.status)),
-									]);
-								}));
+								var tbody = h(
+									'tbody',
+									{},
+									items.map(function (tx) {
+										return h('tr', {}, [
+											h('td', {}, fmtDate(tx.created_at)),
+											h(
+												'td',
+												{},
+												tx.type
+													? t('txType_' + tx.type) ||
+															tx.type
+													: '\u2014',
+											),
+											h('td', {}, fmtAmt(tx.amount)),
+											h(
+												'td',
+												{},
+												(
+													tx.currency || ''
+												).toUpperCase(),
+											),
+											h('td', {}, badge(tx.status)),
+										]);
+									}),
+								);
 
-								listEl.appendChild(h('div', { className: 'smlv-tbl-wrap' }, [
-									h('table', { className: 'smlv-tbl' }, [ h('thead', {}, theadRow), tbody ]),
-								]));
+								listEl.appendChild(
+									h('div', { className: 'smlv-tbl-wrap' }, [
+										h('table', { className: 'smlv-tbl' }, [
+											h('thead', {}, theadRow),
+											tbody,
+										]),
+									]),
+								);
 
 								if (pages > 1) {
-									var prev = h('button', { className: 'smlv-btn smlv-btn-sm' }, t('prevPage'));
-									var next = h('button', { className: 'smlv-btn smlv-btn-sm' }, t('nextPage'));
+									var prev = h(
+										'button',
+										{ className: 'smlv-btn smlv-btn-sm' },
+										t('prevPage'),
+									);
+									var next = h(
+										'button',
+										{ className: 'smlv-btn smlv-btn-sm' },
+										t('nextPage'),
+									);
 									prev.disabled = txPage <= 1;
 									next.disabled = txPage >= pages;
-									prev.addEventListener('click', function () { txPage--; loadTx(); });
-									next.addEventListener('click', function () { txPage++; loadTx(); });
-									listEl.appendChild(h('div', { className: 'smlv-pgn' }, [
-										prev,
-										h('span', { style: 'line-height:2' }, t('pageOf', { page: txPage, total: pages })),
-										next,
-									]));
+									prev.addEventListener('click', function () {
+										txPage--;
+										loadTx();
+									});
+									next.addEventListener('click', function () {
+										txPage++;
+										loadTx();
+									});
+									listEl.appendChild(
+										h('div', { className: 'smlv-pgn' }, [
+											prev,
+											h(
+												'span',
+												{ style: 'line-height:2' },
+												t('pageOf', {
+													page: txPage,
+													total: pages,
+												}),
+											),
+											next,
+										]),
+									);
 								}
 							})
 							.catch(function (e) {
