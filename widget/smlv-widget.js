@@ -63,7 +63,7 @@
 		'.smlv-copy-box{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);font-size:13px;font-family:monospace;word-break:break-all;}',
 		'.smlv-copy-box span{flex:1;}',
 		/* Balance grid */
-		'.smlv-btn-row{display:flex;gap:8px;flex-shrink:0;}',
+		'.smlv-btn-row{display:flex;gap:8px;flex-shrink:0; margin-top:12px;}',
 		'.smlv-bal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px;}',
 		'.smlv-bal-card{background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:14px;}',
 		'.smlv-bal-cur{font-size:12px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;margin-bottom:4px;}',
@@ -1429,7 +1429,18 @@
 			/* ── Merchant owner: wallet balance panel (no CrgAccount) ─────────── */
 			function renderMerchantOwnerPanel() {
 				card.innerHTML = '';
+				card.appendChild(mkHeader(t('balance') || t('smlvBalance')));
 
+				/* ── Tabs: Balance | Transactions ── */
+				var tabs = mkTabs(
+					[t('balance') || t('smlvBalance'), t('transactions')],
+					[renderMoBalancePanel, renderMoTxPanel],
+				);
+				card.appendChild(tabs.tabBar);
+				tabs.panels.forEach(function (p) { card.appendChild(p); });
+
+				/* ── Tab 1: Balance ── */
+				function renderMoBalancePanel(panel) {
 				/* toolbar buttons */
 				var syncBtn = h(
 					'button',
@@ -1460,11 +1471,8 @@
 						openWithdrawModal();
 					});
 				}
-				card.appendChild(
-					mkHeader(t('balance') || t('smlvBalance'), btnRow),
-				);
-				var toolbar =
-					card.lastChild; /* anchor for insertBefore in renderMoBalances */
+				panel.appendChild(btnRow);
+				var toolbar = btnRow; /* anchor for insertBefore in renderMoBalances */
 
 				/* ---------- withdraw modal ---------- */
 				function openWithdrawModal() {
@@ -1519,6 +1527,12 @@
 					});
 					nameWrap.appendChild(nameInput);
 
+					if (cfg.withdrawPrefill) {
+						if (cfg.withdrawPrefill.iban)             ibanInput.value = cfg.withdrawPrefill.iban;
+						if (cfg.withdrawPrefill.bic)              bicInput.value  = cfg.withdrawPrefill.bic;
+						if (cfg.withdrawPrefill.beneficiary_name) nameInput.value = cfg.withdrawPrefill.beneficiary_name;
+					}
+
 					form.appendChild(amountWrap);
 					form.appendChild(ibanWrap);
 					form.appendChild(bicWrap);
@@ -1536,7 +1550,7 @@
 					);
 					var cancelBtn = h(
 						'button',
-						{ className: 'smlv-btn smlv-btn-secondary' },
+						{ className: 'smlv-btn smlv-btn-ghost' },
 						t('cancel') || 'Cancel',
 					);
 					btnRow.appendChild(submitBtn);
@@ -1604,12 +1618,12 @@
 					}
 					var old;
 					while (
-						(old = card.querySelector(
+						(old = panel.querySelector(
 							'.smlv-bal-grid, .smlv-ts, .smlv-spin-wrap',
 						))
 					)
 						old.remove();
-					var oldAlert = card.querySelector(
+					var oldAlert = panel.querySelector(
 						'.smlv-alert:not(.smlv-modal-overlay .smlv-alert)',
 					);
 					if (oldAlert) oldAlert.remove();
@@ -1621,7 +1635,7 @@
 								? res.balances
 								: [];
 					if (!balances.length) {
-						card.insertBefore(
+						panel.insertBefore(
 							alertBox('info', t('noData') || 'No balance data.'),
 							toolbar.nextSibling,
 						);
@@ -1661,7 +1675,7 @@
 							h('div', { className: 'smlv-bal-card' }, children),
 						);
 					});
-					card.insertBefore(newGrid, toolbar.nextSibling);
+					panel.insertBefore(newGrid, toolbar.nextSibling);
 				}
 
 				/* sync button */
@@ -1674,23 +1688,322 @@
 						})
 						.catch(function (e) {
 							syncBtn.disabled = false;
-							card.appendChild(alertBox('err', e.message));
+							panel.appendChild(alertBox('err', e.message));
 						});
 				});
 
 				/* initial load */
-				card.appendChild(spinner());
+				panel.appendChild(spinner());
 				api.get('/merchant/balance')
 					.then(function (res) {
-						var sp = card.querySelector('.smlv-spin-wrap');
+						var sp = panel.querySelector('.smlv-spin-wrap');
 						if (sp) sp.remove();
 						renderMoBalances(res);
 					})
 					.catch(function (e) {
-						var sp = card.querySelector('.smlv-spin-wrap');
+						var sp = panel.querySelector('.smlv-spin-wrap');
 						if (sp) sp.remove();
-						card.appendChild(alertBox('err', e.message));
+						panel.appendChild(alertBox('err', e.message));
 					});
+				} /* end renderMoBalancePanel */
+
+				/* ── Tab 2: Transactions ── */
+				function renderMoTxPanel(panel) {
+					var txPage = 1;
+					var txSort = 'created_at';
+					var txDir = 'desc';
+					var txTotal = 0;
+					var txType = '';
+					var txStatus = '';
+					var txDateFrom = '';
+					var txDateTo = '';
+
+					var COLS = [
+						{ key: 'created_at', label: t('colDate') },
+						{ key: 'type', label: t('colType') },
+						{ key: 'amount', label: t('colAmount') },
+						{ key: null, label: t('colCurrency') },
+						{ key: 'status', label: t('colStatus') },
+					];
+
+					var selType = document.createElement('select');
+					var selStatus = document.createElement('select');
+					var inpFrom = document.createElement('input');
+					var inpTo = document.createElement('input');
+					inpFrom.type = 'text';
+					inpTo.type = 'text';
+					inpFrom.placeholder = 'YYYY-MM-DD';
+					inpTo.placeholder = 'YYYY-MM-DD';
+					inpFrom.readOnly = true;
+					inpTo.readOnly = true;
+					setTimeout(function () {
+						initFlatpickr(inpFrom, inpTo, cfg.lang, onFlt);
+					}, 0);
+					[
+						['', t('allOption')],
+						['deposit', t('txType_deposit')],
+						['withdrawal', t('txType_withdrawal')],
+						['transfer', t('txType_transfer')],
+						['fee', t('txType_fee')],
+						['refund', t('txType_refund')],
+						['bonus', t('txType_bonus')],
+						['adjustment', t('txType_adjustment')],
+					].forEach(function (o) {
+						var e = document.createElement('option');
+						e.value = o[0];
+						e.textContent = o[1];
+						selType.appendChild(e);
+					});
+					[
+						['', t('allOption')],
+						['pending', t('txSt_pending')],
+						['completed', t('txSt_completed')],
+						['failed', t('txSt_failed')],
+						['cancelled', t('txSt_cancelled')],
+					].forEach(function (o) {
+						var e = document.createElement('option');
+						e.value = o[0];
+						e.textContent = o[1];
+						selStatus.appendChild(e);
+					});
+					var dateRe = /^\d{4}-\d{2}-\d{2}$/;
+					function onFlt() {
+						txType = selType.value;
+						txStatus = selStatus.value;
+						txDateFrom =
+							inpFrom.value && dateRe.test(inpFrom.value)
+								? inpFrom.value
+								: '';
+						txDateTo =
+							inpTo.value && dateRe.test(inpTo.value)
+								? inpTo.value
+								: '';
+						txPage = 1;
+						loadTx();
+					}
+					selType.addEventListener('change', onFlt);
+					selStatus.addEventListener('change', onFlt);
+					var rstBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
+						t('filterReset'),
+					);
+					rstBtn.addEventListener('click', function () {
+						selType.value = '';
+						selStatus.value = '';
+						if (inpFrom._fp) {
+							inpFrom._fp.clear(false);
+						} else {
+							inpFrom.value = '';
+						}
+						if (inpTo._fp) {
+							inpTo._fp.clear(false);
+						} else {
+							inpTo.value = '';
+						}
+						txType = '';
+						txStatus = '';
+						txDateFrom = '';
+						txDateTo = '';
+						txPage = 1;
+						loadTx();
+					});
+					panel.appendChild(
+						h('div', { className: 'smlv-fltr' }, [
+							h('label', {}, [t('filterType'), selType]),
+							h('label', {}, [t('filterStatus'), selStatus]),
+							h('label', {}, [t('filterDateFrom'), inpFrom]),
+							h('label', {}, [t('filterDateTo'), inpTo]),
+							rstBtn,
+						]),
+					);
+					var listEl = document.createElement('div');
+					panel.appendChild(listEl);
+					var txSeq = 0;
+
+					function loadTx() {
+						var seq = ++txSeq;
+						listEl.innerHTML = '';
+						listEl.appendChild(spinner());
+						var params = {
+							page: txPage,
+							per_page: perPage,
+							sort: txSort,
+							direction: txDir,
+						};
+						if (txType) params.type = txType;
+						if (txStatus) params.status = txStatus;
+						if (txDateFrom) params.date_from = txDateFrom;
+						if (txDateTo) params.date_to = txDateTo;
+						api.get('/transactions', params)
+							.then(function (res) {
+								if (seq !== txSeq) return;
+								var s = listEl.querySelector('.smlv-spin-wrap');
+								if (s) s.remove();
+								var items =
+									res.data && res.data.items
+										? res.data.items
+										: [];
+								txTotal =
+									res.data && res.data.total
+										? res.data.total
+										: items.length;
+								var pages = Math.ceil(txTotal / perPage);
+
+								if (!items.length) {
+									listEl.appendChild(
+										h(
+											'p',
+											{ style: 'color:var(--smlv-muted);font-size:14px' },
+											t('noTransactions'),
+										),
+									);
+									return;
+								}
+
+								var theadRow = h(
+									'tr',
+									{},
+									COLS.map(function (col) {
+										var isActive = col.key === txSort;
+										var ind = col.key
+											? isActive
+												? txDir === 'asc'
+													? ' \u25b2'
+													: ' \u25bc'
+												: ' \u25bd'
+											: '';
+										var st = col.key
+											? 'cursor:pointer;user-select:none' +
+												(isActive
+													? ';color:var(--smlv-accent)'
+													: '')
+											: '';
+										var th = h(
+											'th',
+											{ style: st },
+											col.label + ind,
+										);
+										if (col.key) {
+											th.addEventListener(
+												'click',
+												(function (k) {
+													return function () {
+														if (txSort === k) {
+															txDir =
+																txDir === 'asc'
+																	? 'desc'
+																	: 'asc';
+														} else {
+															txSort = k;
+															txDir = 'desc';
+														}
+														txPage = 1;
+														loadTx();
+													};
+												})(col.key),
+											);
+										}
+										return th;
+									}),
+								);
+
+								var tbody = h(
+									'tbody',
+									{},
+									items.map(function (tx) {
+										return h('tr', {}, [
+											h('td', {}, fmtDate(tx.created_at)),
+											h(
+												'td',
+												{},
+												tx.type
+													? (function (k) {
+															var tr = t(
+																'txType_' + k,
+															);
+															return tr ===
+																'txType_' + k
+																? k
+																		.charAt(
+																			0,
+																		)
+																		.toUpperCase() +
+																		k.slice(
+																			1,
+																		)
+																: tr;
+													})(tx.type)
+													: '\u2014',
+											),
+											h('td', {}, amtEl(tx.amount)),
+											h(
+												'td',
+												{},
+												(
+													tx.currency || ''
+												).toUpperCase(),
+											),
+											h('td', {}, badge(tx.status)),
+										]);
+									}),
+								);
+
+								listEl.appendChild(
+									h('div', { className: 'smlv-tbl-wrap' }, [
+										h('table', { className: 'smlv-tbl' }, [
+											h('thead', {}, theadRow),
+											tbody,
+										]),
+									]),
+								);
+
+								if (pages > 1) {
+									var prev = h(
+										'button',
+										{ className: 'smlv-btn smlv-btn-sm' },
+										t('prevPage'),
+									);
+									var next = h(
+										'button',
+										{ className: 'smlv-btn smlv-btn-sm' },
+										t('nextPage'),
+									);
+									prev.disabled = txPage <= 1;
+									next.disabled = txPage >= pages;
+									prev.addEventListener('click', function () {
+										txPage--;
+										loadTx();
+									});
+									next.addEventListener('click', function () {
+										txPage++;
+										loadTx();
+									});
+									listEl.appendChild(
+										h('div', { className: 'smlv-pgn' }, [
+											prev,
+											h(
+												'span',
+												{ style: 'line-height:2' },
+												t('pageOf', {
+													page: txPage,
+													total: pages,
+												}),
+											),
+											next,
+										]),
+									);
+								}
+							})
+							.catch(function (e) {
+								var s = listEl.querySelector('.smlv-spin-wrap');
+								if (s) s.remove();
+								listEl.appendChild(alertBox('err', e.message));
+								cb.onError && cb.onError(e);
+							});
+					}
+					loadTx();
+				} /* end renderMoTxPanel */
 			}
 
 			function renderSetupPrompt() {
@@ -1851,6 +2164,11 @@
 								benefInp,
 							]),
 						);
+						if (cfg.withdrawPrefill) {
+							if (cfg.withdrawPrefill.iban)             ibanInp.value  = cfg.withdrawPrefill.iban;
+							if (cfg.withdrawPrefill.bic)              bicInp.value   = cfg.withdrawPrefill.bic;
+							if (cfg.withdrawPrefill.beneficiary_name) benefInp.value = cfg.withdrawPrefill.beneficiary_name;
+						}
 						var wErrBox = h('div', {});
 						withdrawModal.appendChild(wErrBox);
 						var submitWithdrawBtn = h(
