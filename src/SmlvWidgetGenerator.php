@@ -182,6 +182,7 @@ class SmlvWidgetGenerator
      *     @type string $api_url         Override API base URL (staging / dev)
      *     @type array  $prefill         Pre-fill create-account form:
      *                                   first_name, last_name, account_type
+     *     @type bool   $allow_withdraw  Show Withdraw button in balance panel (SaaS owner only)
      * }
      * @return string
      */
@@ -351,6 +352,18 @@ class SmlvWidgetGenerator
         // Forward syncData to the widget (used by account renderer's "Update from SaaS" button)
         if (!empty($options['syncData']) && is_array($options['syncData'])) {
             $config['syncData'] = $options['syncData'];
+        }
+        // URL of SMLV deposit page — shows a Deposit button in the balance panel
+        if (!empty($options['deposit_url'])) {
+            $config['depositUrl'] = $options['deposit_url'];
+        }
+        // Allow withdrawal — shows Withdraw button in the balance panel (SaaS owner only)
+        if (!empty($options['allow_withdraw'])) {
+            $config['allowWithdraw'] = true;
+        }
+        // Merchant owner mode — skip account resolution, show wallet balances directly (no Create button)
+        if (!empty($options['is_merchant_owner'])) {
+            $config['isMerchantOwner'] = true;
         }
 
         return $config;

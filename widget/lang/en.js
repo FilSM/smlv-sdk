@@ -91,6 +91,21 @@ window.SmlvWidgetI18n['en'] = {
 	deleteForever: 'Delete forever',
 	typeDeleteCaps: 'Type DELETE in all caps to confirm.',
 	accountDeleted: 'Account has been permanently deleted.',
+	// ─── Withdraw ───
+	withdraw: 'Withdraw',
+	withdrawTitle: 'Withdraw funds',
+	withdrawAmount: 'Amount',
+	ibanLabel: 'IBAN',
+	bicLabel: 'BIC / SWIFT',
+	beneficiaryLabel: 'Beneficiary name',
+	withdrawSubmit: 'Submit withdrawal',
+	withdrawProcessing: 'Processing\u2026',
+	withdrawSuccess: 'Withdrawal request submitted successfully.',
+	// ─── Merchant owner panel ───
+	noData: 'No balance data available.',
+	frozen: 'Frozen',
+	beneficiaryName: 'Beneficiary name',
+	fillAllFields: 'Please fill in all fields.',
 	// ─── Unified account widget ───
 	smlvBalance: 'SMLV Balance',
 	createSmlvAccount: 'Create SMLV Account',

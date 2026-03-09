@@ -3,6 +3,9 @@
 namespace Smlv\Sdk\Yii2;
 
 use yii\base\Component;
+
+use Firebase\JWT\JWT;
+
 use Smlv\Sdk\SmlvClient;
 use Smlv\Sdk\SmlvBalanceChecker;
 use Smlv\Sdk\SmlvWebhookHandler;
@@ -44,6 +47,11 @@ class SmlvComponent extends Component
      * @var string SMLV Widget Base URL
      */
     public $widgetUrl = 'https://cdn.smlvcoin.com';
+
+    /**
+     * @var string SMLV App (frontend) Base URL — used to build deposit page links
+     */
+    public $appUrl = 'https://smlvcoin.com';
 
     /**
      * @var string JWT secret for widget token signing (falls back to apiSecret if not set)
@@ -158,6 +166,36 @@ class SmlvComponent extends Component
         }
 
         return $this->_webhookHandler;
+    }
+
+    /**
+     * Generate deposit URL for PartnerWidgetController::actionDeposit on SMLV platform.
+     * Returns null if partner credentials are not configured.
+     *
+     * @param string $accountRef External account reference (abonent ID used with SMLV)
+     * @param string $returnUrl  URL to return to after deposit is completed
+     * @param int    $ttl        Token TTL in seconds (default 3600 = 1 hour)
+     * @return string|null
+     */
+    public function generateDepositUrl(string $accountRef, string $returnUrl, int $ttl = 3600, array $options = []): ?string
+    {
+        if (empty($this->appUrl) || empty($this->apiKey) || empty($this->widgetSecret)) {
+            return null;
+        }
+
+        $now     = time();
+        $payload = array_merge([
+            'iat'         => $now,
+            'exp'         => $now + $ttl,
+            'partner_id'  => $this->apiKey,
+            'account_ref' => $accountRef,
+            'return_url'  => $returnUrl,
+        ], $options);
+
+        $token = JWT::encode($payload, $this->widgetSecret, 'HS256');
+
+        $route = !empty($options['is_merchant_owner']) ? 'partner-widget/owner-deposit' : 'partner-widget/deposit';
+        return rtrim($this->appUrl, '/') . '/' . $route . '?token=' . $token;
     }
 
     /**

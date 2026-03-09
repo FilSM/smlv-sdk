@@ -21,6 +21,7 @@
 	var VERSION = '2.0.9';
 	var STYLE_ID = 'smlv-widget-styles';
 	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
+	var _widgetLang = 'en';
 
 	// ─── CSS (injected once into <head>) ────────────────────────────────────────
 
@@ -62,10 +63,11 @@
 		'.smlv-copy-box{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);font-size:13px;font-family:monospace;word-break:break-all;}',
 		'.smlv-copy-box span{flex:1;}',
 		/* Balance grid */
-		'.smlv-bal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:16px;}',
+		'.smlv-btn-row{display:flex;gap:8px;flex-shrink:0;}',
+		'.smlv-bal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px;}',
 		'.smlv-bal-card{background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:14px;}',
 		'.smlv-bal-cur{font-size:12px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;margin-bottom:4px;}',
-		'.smlv-bal-amt{font-size:20px;font-weight:800;line-height:1.2;}',
+		'.smlv-bal-amt{font-size:20px;font-weight:800;line-height:1.2;overflow:hidden;word-break:break-all;}',
 		/* Table */
 		'.smlv-tbl-wrap{overflow-x:auto;}',
 		'.smlv-tbl{width:100%;border-collapse:collapse;font-size:13px;}',
@@ -96,7 +98,8 @@
 		/* Filter bar */
 		'.smlv-fltr{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:16px;padding:10px 12px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);}',
 		'.smlv-fltr label{font-size:11px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;letter-spacing:.05em;display:flex;flex-direction:column;gap:4px;}',
-		'.smlv-fltr select,.smlv-fltr input[type=date]{padding:5px 8px;font-size:13px;background:var(--smlv-bg);border:1px solid var(--smlv-border);border-radius:calc(var(--smlv-r) - 2px);color:var(--smlv-text);height:32px;min-width:100px;}',
+		'.smlv-fltr select,.smlv-fltr input[type=date],.smlv-fltr input[type=text]{padding:5px 8px;font-size:13px;background:var(--smlv-bg);border:1px solid var(--smlv-border);border-radius:calc(var(--smlv-r) - 2px);color:var(--smlv-text);height:32px;min-width:120px;}',
+		,
 		'.smlv-fltr-rst{align-self:flex-end;}',
 		'.smlv-fltr-active{border-color:var(--smlv-accent)!important;color:var(--smlv-accent)!important;}',
 
@@ -294,10 +297,77 @@
 
 	function fmtDate(iso) {
 		try {
-			return new Date(iso).toLocaleString();
+			return new Date(iso).toLocaleString(_widgetLang);
 		} catch (e) {
 			return iso || '—';
 		}
+	}
+
+	var FP_CDN = 'https://cdn.jsdelivr.net/npm/flatpickr';
+
+	function initFlatpickr(inpFrom, inpTo, lang, onChange) {
+		var cssId = 'smlv-fp-css';
+		var jsId = 'smlv-fp-js';
+
+		function applyFp() {
+			var opts = {
+				dateFormat: 'Y-m-d',
+				allowInput: false,
+				disableMobile: true,
+				onChange: function () {
+					onChange && onChange();
+				},
+			};
+			if (lang && lang !== 'en' && window.flatpickr.l10ns[lang]) {
+				opts.locale = lang;
+			}
+			var optsTo = JSON.parse(JSON.stringify(opts));
+			optsTo.onChange = function () {
+				onChange && onChange();
+			};
+			inpFrom._fp = window.flatpickr(inpFrom, opts);
+			inpTo._fp = window.flatpickr(inpTo, optsTo);
+		}
+
+		function loadLocale() {
+			if (!lang || lang === 'en') {
+				applyFp();
+				return;
+			}
+			var locId = 'smlv-fp-loc-' + lang;
+			if (document.getElementById(locId)) {
+				applyFp();
+				return;
+			}
+			var s = document.createElement('script');
+			s.id = locId;
+			s.src = FP_CDN + '/dist/l10n/' + lang + '.js';
+			s.onload = applyFp;
+			document.head.appendChild(s);
+		}
+
+		if (!document.getElementById(cssId)) {
+			var link = document.createElement('link');
+			link.id = cssId;
+			link.rel = 'stylesheet';
+			link.href = FP_CDN + '/dist/flatpickr.min.css';
+			document.head.appendChild(link);
+		}
+
+		if (window.flatpickr) {
+			loadLocale();
+			return;
+		}
+		var existing = document.getElementById(jsId);
+		if (existing) {
+			existing.addEventListener('load', loadLocale);
+			return;
+		}
+		var script = document.createElement('script');
+		script.id = jsId;
+		script.src = FP_CDN;
+		script.onload = loadLocale;
+		document.head.appendChild(script);
 	}
 
 	function fmtAmt(val) {
@@ -307,6 +377,20 @@
 		return n < 0 ? '-' + abs : '+' + abs;
 	}
 
+	function amtEl(val) {
+		var n = parseFloat(val || 0);
+		var style =
+			n < 0
+				? 'color:#e74c3c;font-weight:600'
+				: 'color:#27ae60;font-weight:600';
+		return h('span', { style: style }, fmtAmt(val));
+	}
+
+	function fmtBal(val) {
+		var n = parseFloat(val || 0);
+		if (isNaN(n)) return '0.00000000';
+		return Math.abs(n).toFixed(8);
+	}
 	// ─── Account resolution ─────────────────────────────────────────────────────
 	//
 	// Calls POST /v1/widget/account/resolve.
@@ -701,7 +785,7 @@
 								h(
 									'div',
 									{ className: 'smlv-bal-amt' },
-									fmtAmt(b.amount),
+									fmtBal(b.amount),
 								),
 							]),
 						);
@@ -755,7 +839,24 @@
 				syncBtn.addEventListener('click', function () {
 					doSync(syncBtn);
 				});
-				card.appendChild(mkHeader(t('balance'), syncBtn));
+				var headerRight;
+				if (cfg.depositUrl) {
+					var depositBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-sm smlv-btn-ok' },
+						t('deposit'),
+					);
+					depositBtn.addEventListener('click', function () {
+						window.location.href = cfg.depositUrl;
+					});
+					headerRight = h('div', { className: 'smlv-btn-row' }, [
+						depositBtn,
+						syncBtn,
+					]);
+				} else {
+					headerRight = syncBtn;
+				}
+				card.appendChild(mkHeader(t('balance'), headerRight));
 				card.appendChild(spinner());
 
 				api.get('/balance')
@@ -831,7 +932,7 @@
 								return h('tr', {}, [
 									h('td', {}, fmtDate(tx.created_at)),
 									h('td', {}, tx.type || '—'),
-									h('td', {}, fmtAmt(tx.amount)),
+									h('td', {}, amtEl(tx.amount)),
 									h(
 										'td',
 										{},
@@ -1292,6 +1393,15 @@
 			card.innerHTML = '';
 			card.appendChild(spinner());
 
+			/* ── Merchant owner: bypass account resolution, show wallet balances ── */
+			if (cfg.isMerchantOwner) {
+				var moSpin = card.querySelector('.smlv-spin-wrap');
+				if (moSpin) moSpin.remove();
+				renderMerchantOwnerPanel();
+				cb.onReady && cb.onReady();
+				return;
+			}
+
 			resolveAccount(api)
 				.then(function (res) {
 					var s = card.querySelector('.smlv-spin-wrap');
@@ -1316,6 +1426,273 @@
 				});
 
 			/* в”Ђв”Ђ No SMLV account: single "Create" button в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */
+			/* ── Merchant owner: wallet balance panel (no CrgAccount) ─────────── */
+			function renderMerchantOwnerPanel() {
+				card.innerHTML = '';
+
+				/* toolbar buttons */
+				var syncBtn = h(
+					'button',
+					{ className: 'smlv-btn smlv-btn-sm' },
+					t('sync') || 'Sync',
+				);
+				var btnRow = h('div', { className: 'smlv-btn-row' });
+				if (cfg.depositUrl) {
+					var depBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-sm smlv-btn-ok' },
+						t('deposit') || 'Deposit',
+					);
+					depBtn.addEventListener('click', function () {
+						window.location.href = cfg.depositUrl;
+					});
+					btnRow.appendChild(depBtn);
+				}
+				btnRow.appendChild(syncBtn);
+				if (cfg.allowWithdraw) {
+					var wdBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-sm smlv-btn-primary' },
+						t('withdraw') || 'Withdraw',
+					);
+					btnRow.appendChild(wdBtn);
+					wdBtn.addEventListener('click', function () {
+						openWithdrawModal();
+					});
+				}
+				card.appendChild(
+					mkHeader(t('balance') || t('smlvBalance'), btnRow),
+				);
+				var toolbar =
+					card.lastChild; /* anchor for insertBefore in renderMoBalances */
+
+				/* ---------- withdraw modal ---------- */
+				function openWithdrawModal() {
+					var overlay = h('div', { className: 'smlv-modal-overlay' });
+					var modal = h('div', { className: 'smlv-modal' });
+					modal.appendChild(mkHeader(t('withdraw') || 'Withdraw'));
+					var form = h('div', { className: 'smlv-form' });
+
+					var amountWrap = h('div', { className: 'smlv-form-row' });
+					amountWrap.appendChild(
+						h('label', {}, t('amount') || 'Amount'),
+					);
+					var amountInput = h('input', {
+						type: 'number',
+						className: 'smlv-input',
+						min: '0.01',
+						step: '0.01',
+						placeholder: '0.00',
+					});
+					amountWrap.appendChild(amountInput);
+
+					var ibanWrap = h('div', { className: 'smlv-form-row' });
+					ibanWrap.appendChild(h('label', {}, 'IBAN'));
+					var ibanInput = h('input', {
+						type: 'text',
+						className: 'smlv-input',
+						placeholder: 'LVxxBLAxx...',
+					});
+					ibanWrap.appendChild(ibanInput);
+
+					var bicWrap = h('div', { className: 'smlv-form-row' });
+					bicWrap.appendChild(h('label', {}, 'BIC / SWIFT'));
+					var bicInput = h('input', {
+						type: 'text',
+						className: 'smlv-input',
+						placeholder: 'XXXXX',
+					});
+					bicWrap.appendChild(bicInput);
+
+					var nameWrap = h('div', { className: 'smlv-form-row' });
+					nameWrap.appendChild(
+						h(
+							'label',
+							{},
+							t('beneficiaryName') || 'Beneficiary name',
+						),
+					);
+					var nameInput = h('input', {
+						type: 'text',
+						className: 'smlv-input',
+						placeholder: t('beneficiaryName') || 'Full name',
+					});
+					nameWrap.appendChild(nameInput);
+
+					form.appendChild(amountWrap);
+					form.appendChild(ibanWrap);
+					form.appendChild(bicWrap);
+					form.appendChild(nameWrap);
+					modal.appendChild(form);
+
+					var alertArea = h('div', { className: 'smlv-modal-alert' });
+					modal.appendChild(alertArea);
+
+					var btnRow = h('div', { className: 'smlv-btn-row' });
+					var submitBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-primary' },
+						t('withdraw') || 'Withdraw',
+					);
+					var cancelBtn = h(
+						'button',
+						{ className: 'smlv-btn smlv-btn-secondary' },
+						t('cancel') || 'Cancel',
+					);
+					btnRow.appendChild(submitBtn);
+					btnRow.appendChild(cancelBtn);
+					modal.appendChild(btnRow);
+					overlay.appendChild(modal);
+					card.appendChild(overlay);
+
+					cancelBtn.addEventListener('click', function () {
+						overlay.remove();
+					});
+
+					submitBtn.addEventListener('click', function () {
+						alertArea.innerHTML = '';
+						var amount = parseFloat(amountInput.value);
+						var iban = ibanInput.value.trim();
+						var bic = bicInput.value.trim();
+						var beneficiaryName = nameInput.value.trim();
+						if (
+							!amount ||
+							amount <= 0 ||
+							!iban ||
+							!bic ||
+							!beneficiaryName
+						) {
+							alertArea.appendChild(
+								alertBox(
+									'err',
+									t('fillAllFields') ||
+										'Please fill all fields.',
+								),
+							);
+							return;
+						}
+						submitBtn.disabled = true;
+						api.post('/merchant/withdraw', {
+							amount: amount,
+							iban: iban,
+							bic: bic,
+							beneficiary_name: beneficiaryName,
+						})
+							.then(function () {
+								overlay.remove();
+								api.get('/merchant/balance')
+									.then(renderMoBalances)
+									.catch(function () {});
+							})
+							.catch(function (e) {
+								submitBtn.disabled = false;
+								alertArea.innerHTML = '';
+								alertArea.appendChild(
+									alertBox('err', e.message),
+								);
+							});
+					});
+				}
+
+				/* ---------- render balances ---------- */
+				function renderMoBalances(res) {
+					if (res && res.data && res.data._debug) {
+						console.log(
+							'[SMLV merchant balance debug]',
+							res.data._debug,
+						);
+					}
+					var old;
+					while (
+						(old = card.querySelector(
+							'.smlv-bal-grid, .smlv-ts, .smlv-spin-wrap',
+						))
+					)
+						old.remove();
+					var oldAlert = card.querySelector(
+						'.smlv-alert:not(.smlv-modal-overlay .smlv-alert)',
+					);
+					if (oldAlert) oldAlert.remove();
+
+					var balances =
+						res && res.data && res.data.balances
+							? res.data.balances
+							: res && res.balances
+								? res.balances
+								: [];
+					if (!balances.length) {
+						card.insertBefore(
+							alertBox('info', t('noData') || 'No balance data.'),
+							toolbar.nextSibling,
+						);
+						return;
+					}
+					var newGrid = h('div', { className: 'smlv-bal-grid' });
+					balances.forEach(function (b) {
+						var children = [
+							h(
+								'div',
+								{ className: 'smlv-bal-cur' },
+								(b.currency || '').toUpperCase(),
+							),
+							h(
+								'div',
+								{ className: 'smlv-bal-amt' },
+								b.amount != null ? fmtBal(b.amount) : '—',
+							),
+						];
+						if (
+							b.frozen_balance != null &&
+							b.frozen_balance !== 0
+						) {
+							children.push(
+								h(
+									'div',
+									{
+										style: 'font-size:11px;color:var(--smlv-muted);margin-top:4px;',
+									},
+									(t('frozen') || 'Frozen') +
+										': ' +
+										fmtBal(b.frozen_balance),
+								),
+							);
+						}
+						newGrid.appendChild(
+							h('div', { className: 'smlv-bal-card' }, children),
+						);
+					});
+					card.insertBefore(newGrid, toolbar.nextSibling);
+				}
+
+				/* sync button */
+				syncBtn.addEventListener('click', function () {
+					syncBtn.disabled = true;
+					api.post('/merchant/balance/sync', {})
+						.then(function (res) {
+							renderMoBalances(res);
+							syncBtn.disabled = false;
+						})
+						.catch(function (e) {
+							syncBtn.disabled = false;
+							card.appendChild(alertBox('err', e.message));
+						});
+				});
+
+				/* initial load */
+				card.appendChild(spinner());
+				api.get('/merchant/balance')
+					.then(function (res) {
+						var sp = card.querySelector('.smlv-spin-wrap');
+						if (sp) sp.remove();
+						renderMoBalances(res);
+					})
+					.catch(function (e) {
+						var sp = card.querySelector('.smlv-spin-wrap');
+						if (sp) sp.remove();
+						card.appendChild(alertBox('err', e.message));
+					});
+			}
+
 			function renderSetupPrompt() {
 				card.innerHTML = '';
 				card.appendChild(mkHeader(t('smlvBalance')));
@@ -1371,13 +1748,251 @@
 				function renderBalancePanel(panel) {
 					var syncBtn = h(
 						'button',
-						{
-							className: 'smlv-btn smlv-btn-sm',
-							style: 'margin-bottom:12px',
-						},
+						{ className: 'smlv-btn smlv-btn-sm' },
 						t('sync'),
 					);
-					panel.appendChild(syncBtn);
+					var btnRow = h(
+						'div',
+						{
+							className: 'smlv-btn-row',
+							style: 'margin-bottom:12px',
+						},
+						[syncBtn],
+					);
+					if (cfg.depositUrl) {
+						var depositBtn = h(
+							'button',
+							{ className: 'smlv-btn smlv-btn-sm smlv-btn-ok' },
+							t('deposit'),
+						);
+						depositBtn.addEventListener('click', function () {
+							window.location.href = cfg.depositUrl;
+						});
+						btnRow.appendChild(depositBtn);
+					}
+					if (cfg.allowWithdraw) {
+						var withdrawBtn = h(
+							'button',
+							{
+								className:
+									'smlv-btn smlv-btn-sm smlv-btn-danger',
+							},
+							t('withdraw'),
+						);
+						btnRow.appendChild(withdrawBtn);
+					}
+					panel.appendChild(btnRow);
+					if (cfg.allowWithdraw) {
+						var withdrawModal = h('div', {
+							className: 'smlv-confirm smlv-withdraw-modal',
+							style: 'display:none;margin-top:0',
+						});
+						withdrawModal.appendChild(
+							h('p', {}, h('strong', {}, t('withdrawTitle'))),
+						);
+						var amountInp = h('input', {
+							className: 'smlv-input',
+							type: 'number',
+							min: '0.01',
+							step: '0.01',
+							placeholder: '0.00',
+						});
+						var ibanInp = h('input', {
+							className: 'smlv-input',
+							type: 'text',
+							placeholder: 'LV00BANK0000000000000',
+						});
+						var bicInp = h('input', {
+							className: 'smlv-input',
+							type: 'text',
+							placeholder: 'XXXXXX',
+						});
+						var benefInp = h('input', {
+							className: 'smlv-input',
+							type: 'text',
+						});
+						withdrawModal.appendChild(
+							h('div', { className: 'smlv-field' }, [
+								h(
+									'label',
+									{ className: 'smlv-label' },
+									t('withdrawAmount'),
+								),
+								amountInp,
+							]),
+						);
+						withdrawModal.appendChild(
+							h('div', { className: 'smlv-field' }, [
+								h(
+									'label',
+									{ className: 'smlv-label' },
+									t('ibanLabel'),
+								),
+								ibanInp,
+							]),
+						);
+						withdrawModal.appendChild(
+							h('div', { className: 'smlv-field' }, [
+								h(
+									'label',
+									{ className: 'smlv-label' },
+									t('bicLabel'),
+								),
+								bicInp,
+							]),
+						);
+						withdrawModal.appendChild(
+							h('div', { className: 'smlv-field' }, [
+								h(
+									'label',
+									{ className: 'smlv-label' },
+									t('beneficiaryLabel'),
+								),
+								benefInp,
+							]),
+						);
+						var wErrBox = h('div', {});
+						withdrawModal.appendChild(wErrBox);
+						var submitWithdrawBtn = h(
+							'button',
+							{
+								className: 'smlv-btn smlv-btn-danger',
+								style: 'width:auto;padding:8px 16px',
+							},
+							t('withdrawSubmit'),
+						);
+						var cancelWithdrawBtn = h(
+							'button',
+							{
+								className: 'smlv-btn smlv-btn-ghost',
+								style: 'width:auto;padding:8px 16px',
+							},
+							t('cancel'),
+						);
+						withdrawModal.appendChild(
+							h('div', { className: 'smlv-form-actions' }, [
+								cancelWithdrawBtn,
+								submitWithdrawBtn,
+							]),
+						);
+						cancelWithdrawBtn.addEventListener(
+							'click',
+							function () {
+								withdrawModal.style.display = 'none';
+							},
+						);
+						submitWithdrawBtn.addEventListener(
+							'click',
+							function () {
+								var amount = parseFloat(amountInp.value);
+								var iban = ibanInp.value.trim().toUpperCase();
+								var bic = bicInp.value.trim().toUpperCase();
+								var beneficiary = benefInp.value.trim();
+								wErrBox.innerHTML = '';
+								if (!amount || amount <= 0) {
+									wErrBox.appendChild(
+										alertBox(
+											'err',
+											t('withdrawAmount') +
+												' is required',
+										),
+									);
+									return;
+								}
+								if (!iban) {
+									wErrBox.appendChild(
+										alertBox(
+											'err',
+											t('ibanLabel') + ' is required',
+										),
+									);
+									return;
+								}
+								if (!bic) {
+									wErrBox.appendChild(
+										alertBox(
+											'err',
+											t('bicLabel') + ' is required',
+										),
+									);
+									return;
+								}
+								if (!beneficiary) {
+									wErrBox.appendChild(
+										alertBox(
+											'err',
+											t('beneficiaryLabel') +
+												' is required',
+										),
+									);
+									return;
+								}
+								submitWithdrawBtn.disabled = true;
+								submitWithdrawBtn.textContent =
+									t('withdrawProcessing');
+								api.post('/withdraw', {
+									amount: amount,
+									iban: iban,
+									bic: bic,
+									beneficiary_name: beneficiary,
+								})
+									.then(function (r) {
+										withdrawModal.innerHTML = '';
+										withdrawModal.appendChild(
+											alertBox(
+												'ok',
+												t('withdrawSuccess'),
+											),
+										);
+										var doneBtn = h(
+											'button',
+											{
+												className:
+													'smlv-btn smlv-btn-sm',
+												style: 'margin-top:10px;width:auto;padding:8px 16px',
+											},
+											t('cancel'),
+										);
+										doneBtn.addEventListener(
+											'click',
+											function () {
+												withdrawModal.style.display =
+													'none';
+												api.get('/balance')
+													.then(renderBalances)
+													.catch(function () {});
+											},
+										);
+										withdrawModal.appendChild(doneBtn);
+										cb.onSuccess &&
+											cb.onSuccess({
+												event: 'withdraw',
+												data: r.data,
+											});
+									})
+									.catch(function (e) {
+										wErrBox.innerHTML = '';
+										wErrBox.appendChild(
+											alertBox('err', e.message),
+										);
+										submitWithdrawBtn.disabled = false;
+										submitWithdrawBtn.textContent =
+											t('withdrawSubmit');
+										cb.onError && cb.onError(e);
+									});
+							},
+						);
+						withdrawBtn.addEventListener('click', function () {
+							wErrBox.innerHTML = '';
+							submitWithdrawBtn.disabled = false;
+							submitWithdrawBtn.textContent = t('withdrawSubmit');
+							withdrawModal.style.display =
+								withdrawModal.style.display === 'none'
+									? 'block'
+									: 'none';
+						});
+						panel.appendChild(withdrawModal);
+					}
 					panel.appendChild(spinner());
 
 					function renderBalances(res) {
@@ -1417,7 +2032,7 @@
 										h(
 											'div',
 											{ className: 'smlv-bal-amt' },
-											fmtAmt(b.amount),
+											fmtBal(b.amount),
 										),
 									]),
 								);
@@ -1490,8 +2105,15 @@
 					var selStatus = document.createElement('select');
 					var inpFrom = document.createElement('input');
 					var inpTo = document.createElement('input');
-					inpFrom.type = 'date';
-					inpTo.type = 'date';
+					inpFrom.type = 'text';
+					inpTo.type = 'text';
+					inpFrom.placeholder = 'YYYY-MM-DD';
+					inpTo.placeholder = 'YYYY-MM-DD';
+					inpFrom.readOnly = true;
+					inpTo.readOnly = true;
+					setTimeout(function () {
+						initFlatpickr(inpFrom, inpTo, cfg.lang, onFlt);
+					}, 0);
 					[
 						['', t('allOption')],
 						['deposit', t('txType_deposit')],
@@ -1519,18 +2141,23 @@
 						e.textContent = o[1];
 						selStatus.appendChild(e);
 					});
+					var dateRe = /^\d{4}-\d{2}-\d{2}$/;
 					function onFlt() {
 						txType = selType.value;
 						txStatus = selStatus.value;
-						txDateFrom = inpFrom.value;
-						txDateTo = inpTo.value;
+						txDateFrom =
+							inpFrom.value && dateRe.test(inpFrom.value)
+								? inpFrom.value
+								: '';
+						txDateTo =
+							inpTo.value && dateRe.test(inpTo.value)
+								? inpTo.value
+								: '';
 						txPage = 1;
 						loadTx();
 					}
 					selType.addEventListener('change', onFlt);
 					selStatus.addEventListener('change', onFlt);
-					inpFrom.addEventListener('change', onFlt);
-					inpTo.addEventListener('change', onFlt);
 					var rstBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
@@ -1539,8 +2166,16 @@
 					rstBtn.addEventListener('click', function () {
 						selType.value = '';
 						selStatus.value = '';
-						inpFrom.value = '';
-						inpTo.value = '';
+						if (inpFrom._fp) {
+							inpFrom._fp.clear(false);
+						} else {
+							inpFrom.value = '';
+						}
+						if (inpTo._fp) {
+							inpTo._fp.clear(false);
+						} else {
+							inpTo.value = '';
+						}
 						txType = '';
 						txStatus = '';
 						txDateFrom = '';
@@ -1559,8 +2194,10 @@
 					);
 					var listEl = document.createElement('div');
 					panel.appendChild(listEl);
+					var txSeq = 0;
 
 					function loadTx() {
+						var seq = ++txSeq;
 						listEl.innerHTML = '';
 						listEl.appendChild(spinner());
 						var params = {
@@ -1575,6 +2212,7 @@
 						if (txDateTo) params.date_to = txDateTo;
 						api.get('/transactions', params)
 							.then(function (res) {
+								if (seq !== txSeq) return;
 								var s = listEl.querySelector('.smlv-spin-wrap');
 								if (s) s.remove();
 								var items =
@@ -1658,14 +2296,24 @@
 												{},
 												tx.type
 													? (function (k) {
-															var tr = t('txType_' + k);
-															return tr === 'txType_' + k
-																? k.charAt(0).toUpperCase() + k.slice(1)
+															var tr = t(
+																'txType_' + k,
+															);
+															return tr ===
+																'txType_' + k
+																? k
+																		.charAt(
+																			0,
+																		)
+																		.toUpperCase() +
+																		k.slice(
+																			1,
+																		)
 																: tr;
-													  })(tx.type)
+														})(tx.type)
 													: '\u2014',
 											),
-											h('td', {}, fmtAmt(tx.amount)),
+											h('td', {}, amtEl(tx.amount)),
 											h(
 												'td',
 												{},
@@ -2035,6 +2683,7 @@
 
 	WidgetInstance.prototype.mount = function () {
 		var cfg = this.config;
+		_widgetLang = cfg.lang || 'en';
 
 		/* Resolve container */
 		var el =
@@ -2057,6 +2706,7 @@
 		/* Stamp the root */
 		el.setAttribute('data-smlv', type);
 		el.setAttribute('data-theme', theme);
+		el.setAttribute('lang', cfg.lang || 'en');
 		el.innerHTML = '<div class="smlv-card"></div>';
 		this.el = el;
 
@@ -2179,6 +2829,7 @@
 		 * @param {string}         [config.lang]       BCP-47, e.g. 'en', 'ru'
 		 * @param {string}         [config.apiUrl]     Override API base URL
 		 * @param {string}         [config.returnUrl]  Redirect after success (deposit)
+		 * @param {string}         [config.depositUrl] URL of SMLV deposit page (shows Deposit button in balance panel)
 		 * @param {number}         [config.perPage]    Rows per page (transactions)
 		 * @param {object}         [config.prefill]    Pre-fill create-account form
 		 * @param {string}         [config.prefill.first_name]

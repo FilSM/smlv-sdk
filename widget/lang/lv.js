@@ -1,4 +1,4 @@
-/* global SmlvWidgetI18n */
+﻿/* global SmlvWidgetI18n */
 window.SmlvWidgetI18n = window.SmlvWidgetI18n || {};
 window.SmlvWidgetI18n['lv'] = {
 	createAccount: 'Izveidot kontu',
@@ -95,7 +95,22 @@ window.SmlvWidgetI18n['lv'] = {
 		'Ievadiet DELETE ar lielajiem burtiem, lai apstiprin\u0101tu.',
 	accountDeleted: 'Konts tika neatgriezeniski dz\u0113sts.',
 	// ─── Vienotais konta logr\u012bks ───
-	smlvBalance: 'SMLV Bilance',
+	// --- Izmaksa ---
+	withdraw: 'Izmaks\u0101t',
+	withdrawTitle: 'L\u012bdze\u013cu izmaksa',
+	withdrawAmount: 'Summa',
+	ibanLabel: 'IBAN',
+	bicLabel: 'BIC / SWIFT',
+	beneficiaryLabel: 'Sa\u0146\u0113m\u0113ja nosaukums',
+	withdrawSubmit: 'Iesniegt piepras\u012bjumu',
+	withdrawProcessing: 'Apstr\u0101d\u0101\u2026',
+	withdrawSuccess: 'Izmaksas piepras\u012bjums veiksm\u012bgi iesniegts.',
+	// --- Merchant owner panel ---
+	noData: 'Nav pieejami bilances dati.',
+	frozen: 'Iesald\u0113ts',
+	beneficiaryName: 'Sa\u0146\u0113m\u0113ja nosaukums',
+	fillAllFields: 'L\u016bdzu aizpildiet visus laukus.',
+		smlvBalance: 'SMLV Bilance',
 	createSmlvAccount: 'Izveidot SMLV kontu',
 	pushUpdate: 'Atjaunin\u0101t no SaaS',
 	pushUpdating: 'Atjaunina\u2026',
