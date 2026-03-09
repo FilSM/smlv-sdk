@@ -1450,6 +1450,7 @@
 						t('sync') || 'Sync',
 					);
 					var btnRow = h('div', { className: 'smlv-btn-row' });
+					btnRow.appendChild(syncBtn);
 					if (cfg.depositUrl) {
 						var depBtn = h(
 							'button',
@@ -1461,7 +1462,6 @@
 						});
 						btnRow.appendChild(depBtn);
 					}
-					btnRow.appendChild(syncBtn);
 					if (cfg.allowWithdraw) {
 						var wdBtn = h(
 							'button',
