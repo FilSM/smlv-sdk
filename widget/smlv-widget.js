@@ -63,7 +63,7 @@
 		'.smlv-copy-box{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);font-size:13px;font-family:monospace;word-break:break-all;}',
 		'.smlv-copy-box span{flex:1;}',
 		/* Balance grid */
-		'.smlv-btn-row{display:flex;gap:8px;flex-shrink:0; margin-top:12px;}',
+		'.smlv-btn-row{display:flex;gap:8px;flex-shrink:0; margin-top:12px; margin-bottom:12px;}',
 		'.smlv-bal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px;}',
 		'.smlv-bal-card{background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:14px;}',
 		'.smlv-bal-cur{font-size:12px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;margin-bottom:4px;}',
@@ -1437,274 +1437,299 @@
 					[renderMoBalancePanel, renderMoTxPanel],
 				);
 				card.appendChild(tabs.tabBar);
-				tabs.panels.forEach(function (p) { card.appendChild(p); });
+				tabs.panels.forEach(function (p) {
+					card.appendChild(p);
+				});
 
 				/* ── Tab 1: Balance ── */
 				function renderMoBalancePanel(panel) {
-				/* toolbar buttons */
-				var syncBtn = h(
-					'button',
-					{ className: 'smlv-btn smlv-btn-sm' },
-					t('sync') || 'Sync',
-				);
-				var btnRow = h('div', { className: 'smlv-btn-row' });
-				if (cfg.depositUrl) {
-					var depBtn = h(
+					/* toolbar buttons */
+					var syncBtn = h(
 						'button',
-						{ className: 'smlv-btn smlv-btn-sm smlv-btn-ok' },
-						t('deposit') || 'Deposit',
+						{ className: 'smlv-btn smlv-btn-sm' },
+						t('sync') || 'Sync',
 					);
-					depBtn.addEventListener('click', function () {
-						window.location.href = cfg.depositUrl;
-					});
-					btnRow.appendChild(depBtn);
-				}
-				btnRow.appendChild(syncBtn);
-				if (cfg.allowWithdraw) {
-					var wdBtn = h(
-						'button',
-						{ className: 'smlv-btn smlv-btn-sm smlv-btn-primary' },
-						t('withdraw') || 'Withdraw',
-					);
-					btnRow.appendChild(wdBtn);
-					wdBtn.addEventListener('click', function () {
-						openWithdrawModal();
-					});
-				}
-				panel.appendChild(btnRow);
-				var toolbar = btnRow; /* anchor for insertBefore in renderMoBalances */
+					var btnRow = h('div', { className: 'smlv-btn-row' });
+					if (cfg.depositUrl) {
+						var depBtn = h(
+							'button',
+							{ className: 'smlv-btn smlv-btn-sm smlv-btn-ok' },
+							t('deposit') || 'Deposit',
+						);
+						depBtn.addEventListener('click', function () {
+							window.location.href = cfg.depositUrl;
+						});
+						btnRow.appendChild(depBtn);
+					}
+					btnRow.appendChild(syncBtn);
+					if (cfg.allowWithdraw) {
+						var wdBtn = h(
+							'button',
+							{
+								className:
+									'smlv-btn smlv-btn-sm smlv-btn-primary',
+							},
+							t('withdraw') || 'Withdraw',
+						);
+						btnRow.appendChild(wdBtn);
+						wdBtn.addEventListener('click', function () {
+							openWithdrawModal();
+						});
+					}
+					panel.appendChild(btnRow);
+					var toolbar =
+						btnRow; /* anchor for insertBefore in renderMoBalances */
 
-				/* ---------- withdraw modal ---------- */
-				function openWithdrawModal() {
-					var overlay = h('div', { className: 'smlv-modal-overlay' });
-					var modal = h('div', { className: 'smlv-modal' });
-					modal.appendChild(mkHeader(t('withdraw') || 'Withdraw'));
-					var form = h('div', { className: 'smlv-form' });
+					/* ---------- withdraw modal ---------- */
+					function openWithdrawModal() {
+						var overlay = h('div', {
+							className: 'smlv-modal-overlay',
+						});
+						var modal = h('div', { className: 'smlv-modal' });
+						modal.appendChild(
+							mkHeader(t('withdraw') || 'Withdraw'),
+						);
+						var form = h('div', { className: 'smlv-form' });
 
-					var amountWrap = h('div', { className: 'smlv-form-row' });
-					amountWrap.appendChild(
-						h('label', {}, t('amount') || 'Amount'),
-					);
-					var amountInput = h('input', {
-						type: 'number',
-						className: 'smlv-input',
-						min: '0.01',
-						step: '0.01',
-						placeholder: '0.00',
-					});
-					amountWrap.appendChild(amountInput);
+						var amountWrap = h('div', {
+							className: 'smlv-form-row',
+						});
+						amountWrap.appendChild(
+							h('label', {}, t('amount') || 'Amount'),
+						);
+						var amountInput = h('input', {
+							type: 'number',
+							className: 'smlv-input',
+							min: '0.01',
+							step: '0.01',
+							placeholder: '0.00',
+						});
+						amountWrap.appendChild(amountInput);
 
-					var ibanWrap = h('div', { className: 'smlv-form-row' });
-					ibanWrap.appendChild(h('label', {}, 'IBAN'));
-					var ibanInput = h('input', {
-						type: 'text',
-						className: 'smlv-input',
-						placeholder: 'LVxxBLAxx...',
-					});
-					ibanWrap.appendChild(ibanInput);
+						var ibanWrap = h('div', { className: 'smlv-form-row' });
+						ibanWrap.appendChild(h('label', {}, 'IBAN'));
+						var ibanInput = h('input', {
+							type: 'text',
+							className: 'smlv-input',
+							placeholder: 'LVxxBLAxx...',
+						});
+						ibanWrap.appendChild(ibanInput);
 
-					var bicWrap = h('div', { className: 'smlv-form-row' });
-					bicWrap.appendChild(h('label', {}, 'BIC / SWIFT'));
-					var bicInput = h('input', {
-						type: 'text',
-						className: 'smlv-input',
-						placeholder: 'XXXXX',
-					});
-					bicWrap.appendChild(bicInput);
+						var bicWrap = h('div', { className: 'smlv-form-row' });
+						bicWrap.appendChild(h('label', {}, 'BIC / SWIFT'));
+						var bicInput = h('input', {
+							type: 'text',
+							className: 'smlv-input',
+							placeholder: 'XXXXX',
+						});
+						bicWrap.appendChild(bicInput);
 
-					var nameWrap = h('div', { className: 'smlv-form-row' });
-					nameWrap.appendChild(
-						h(
-							'label',
-							{},
-							t('beneficiaryName') || 'Beneficiary name',
-						),
-					);
-					var nameInput = h('input', {
-						type: 'text',
-						className: 'smlv-input',
-						placeholder: t('beneficiaryName') || 'Full name',
-					});
-					nameWrap.appendChild(nameInput);
+						var nameWrap = h('div', { className: 'smlv-form-row' });
+						nameWrap.appendChild(
+							h(
+								'label',
+								{},
+								t('beneficiaryName') || 'Beneficiary name',
+							),
+						);
+						var nameInput = h('input', {
+							type: 'text',
+							className: 'smlv-input',
+							placeholder: t('beneficiaryName') || 'Full name',
+						});
+						nameWrap.appendChild(nameInput);
 
-					if (cfg.withdrawPrefill) {
-						if (cfg.withdrawPrefill.iban)             ibanInput.value = cfg.withdrawPrefill.iban;
-						if (cfg.withdrawPrefill.bic)              bicInput.value  = cfg.withdrawPrefill.bic;
-						if (cfg.withdrawPrefill.beneficiary_name) nameInput.value = cfg.withdrawPrefill.beneficiary_name;
+						if (cfg.withdrawPrefill) {
+							if (cfg.withdrawPrefill.iban)
+								ibanInput.value = cfg.withdrawPrefill.iban;
+							if (cfg.withdrawPrefill.bic)
+								bicInput.value = cfg.withdrawPrefill.bic;
+							if (cfg.withdrawPrefill.beneficiary_name)
+								nameInput.value =
+									cfg.withdrawPrefill.beneficiary_name;
+						}
+
+						form.appendChild(amountWrap);
+						form.appendChild(ibanWrap);
+						form.appendChild(bicWrap);
+						form.appendChild(nameWrap);
+						modal.appendChild(form);
+
+						var alertArea = h('div', {
+							className: 'smlv-modal-alert',
+						});
+						modal.appendChild(alertArea);
+
+						var btnRow = h('div', { className: 'smlv-btn-row' });
+						var submitBtn = h(
+							'button',
+							{ className: 'smlv-btn smlv-btn-primary' },
+							t('withdraw') || 'Withdraw',
+						);
+						var cancelBtn = h(
+							'button',
+							{ className: 'smlv-btn smlv-btn-ghost' },
+							t('cancel') || 'Cancel',
+						);
+						btnRow.appendChild(submitBtn);
+						btnRow.appendChild(cancelBtn);
+						modal.appendChild(btnRow);
+						overlay.appendChild(modal);
+						card.appendChild(overlay);
+
+						cancelBtn.addEventListener('click', function () {
+							overlay.remove();
+						});
+
+						submitBtn.addEventListener('click', function () {
+							alertArea.innerHTML = '';
+							var amount = parseFloat(amountInput.value);
+							var iban = ibanInput.value.trim();
+							var bic = bicInput.value.trim();
+							var beneficiaryName = nameInput.value.trim();
+							if (
+								!amount ||
+								amount <= 0 ||
+								!iban ||
+								!bic ||
+								!beneficiaryName
+							) {
+								alertArea.appendChild(
+									alertBox(
+										'err',
+										t('fillAllFields') ||
+											'Please fill all fields.',
+									),
+								);
+								return;
+							}
+							submitBtn.disabled = true;
+							api.post('/merchant/withdraw', {
+								amount: amount,
+								iban: iban,
+								bic: bic,
+								beneficiary_name: beneficiaryName,
+							})
+								.then(function () {
+									overlay.remove();
+									api.get('/merchant/balance')
+										.then(renderMoBalances)
+										.catch(function () {});
+								})
+								.catch(function (e) {
+									submitBtn.disabled = false;
+									alertArea.innerHTML = '';
+									alertArea.appendChild(
+										alertBox('err', e.message),
+									);
+								});
+						});
 					}
 
-					form.appendChild(amountWrap);
-					form.appendChild(ibanWrap);
-					form.appendChild(bicWrap);
-					form.appendChild(nameWrap);
-					modal.appendChild(form);
+					/* ---------- render balances ---------- */
+					function renderMoBalances(res) {
+						if (res && res.data && res.data._debug) {
+							console.log(
+								'[SMLV merchant balance debug]',
+								res.data._debug,
+							);
+						}
+						var old;
+						while (
+							(old = panel.querySelector(
+								'.smlv-bal-grid, .smlv-ts, .smlv-spin-wrap',
+							))
+						)
+							old.remove();
+						var oldAlert = panel.querySelector(
+							'.smlv-alert:not(.smlv-modal-overlay .smlv-alert)',
+						);
+						if (oldAlert) oldAlert.remove();
 
-					var alertArea = h('div', { className: 'smlv-modal-alert' });
-					modal.appendChild(alertArea);
-
-					var btnRow = h('div', { className: 'smlv-btn-row' });
-					var submitBtn = h(
-						'button',
-						{ className: 'smlv-btn smlv-btn-primary' },
-						t('withdraw') || 'Withdraw',
-					);
-					var cancelBtn = h(
-						'button',
-						{ className: 'smlv-btn smlv-btn-ghost' },
-						t('cancel') || 'Cancel',
-					);
-					btnRow.appendChild(submitBtn);
-					btnRow.appendChild(cancelBtn);
-					modal.appendChild(btnRow);
-					overlay.appendChild(modal);
-					card.appendChild(overlay);
-
-					cancelBtn.addEventListener('click', function () {
-						overlay.remove();
-					});
-
-					submitBtn.addEventListener('click', function () {
-						alertArea.innerHTML = '';
-						var amount = parseFloat(amountInput.value);
-						var iban = ibanInput.value.trim();
-						var bic = bicInput.value.trim();
-						var beneficiaryName = nameInput.value.trim();
-						if (
-							!amount ||
-							amount <= 0 ||
-							!iban ||
-							!bic ||
-							!beneficiaryName
-						) {
-							alertArea.appendChild(
+						var balances =
+							res && res.data && res.data.balances
+								? res.data.balances
+								: res && res.balances
+									? res.balances
+									: [];
+						if (!balances.length) {
+							panel.insertBefore(
 								alertBox(
-									'err',
-									t('fillAllFields') ||
-										'Please fill all fields.',
+									'info',
+									t('noData') || 'No balance data.',
 								),
+								toolbar.nextSibling,
 							);
 							return;
 						}
-						submitBtn.disabled = true;
-						api.post('/merchant/withdraw', {
-							amount: amount,
-							iban: iban,
-							bic: bic,
-							beneficiary_name: beneficiaryName,
-						})
-							.then(function () {
-								overlay.remove();
-								api.get('/merchant/balance')
-									.then(renderMoBalances)
-									.catch(function () {});
-							})
-							.catch(function (e) {
-								submitBtn.disabled = false;
-								alertArea.innerHTML = '';
-								alertArea.appendChild(
-									alertBox('err', e.message),
-								);
-							});
-					});
-				}
-
-				/* ---------- render balances ---------- */
-				function renderMoBalances(res) {
-					if (res && res.data && res.data._debug) {
-						console.log(
-							'[SMLV merchant balance debug]',
-							res.data._debug,
-						);
-					}
-					var old;
-					while (
-						(old = panel.querySelector(
-							'.smlv-bal-grid, .smlv-ts, .smlv-spin-wrap',
-						))
-					)
-						old.remove();
-					var oldAlert = panel.querySelector(
-						'.smlv-alert:not(.smlv-modal-overlay .smlv-alert)',
-					);
-					if (oldAlert) oldAlert.remove();
-
-					var balances =
-						res && res.data && res.data.balances
-							? res.data.balances
-							: res && res.balances
-								? res.balances
-								: [];
-					if (!balances.length) {
-						panel.insertBefore(
-							alertBox('info', t('noData') || 'No balance data.'),
-							toolbar.nextSibling,
-						);
-						return;
-					}
-					var newGrid = h('div', { className: 'smlv-bal-grid' });
-					balances.forEach(function (b) {
-						var children = [
-							h(
-								'div',
-								{ className: 'smlv-bal-cur' },
-								(b.currency || '').toUpperCase(),
-							),
-							h(
-								'div',
-								{ className: 'smlv-bal-amt' },
-								b.amount != null ? fmtBal(b.amount) : '—',
-							),
-						];
-						if (
-							b.frozen_balance != null &&
-							b.frozen_balance !== 0
-						) {
-							children.push(
+						var newGrid = h('div', { className: 'smlv-bal-grid' });
+						balances.forEach(function (b) {
+							var children = [
 								h(
 									'div',
-									{
-										style: 'font-size:11px;color:var(--smlv-muted);margin-top:4px;',
-									},
-									(t('frozen') || 'Frozen') +
-										': ' +
-										fmtBal(b.frozen_balance),
+									{ className: 'smlv-bal-cur' },
+									(b.currency || '').toUpperCase(),
+								),
+								h(
+									'div',
+									{ className: 'smlv-bal-amt' },
+									b.amount != null ? fmtBal(b.amount) : '—',
+								),
+							];
+							if (
+								b.frozen_balance != null &&
+								b.frozen_balance !== 0
+							) {
+								children.push(
+									h(
+										'div',
+										{
+											style: 'font-size:11px;color:var(--smlv-muted);margin-top:4px;',
+										},
+										(t('frozen') || 'Frozen') +
+											': ' +
+											fmtBal(b.frozen_balance),
+									),
+								);
+							}
+							newGrid.appendChild(
+								h(
+									'div',
+									{ className: 'smlv-bal-card' },
+									children,
 								),
 							);
-						}
-						newGrid.appendChild(
-							h('div', { className: 'smlv-bal-card' }, children),
-						);
-					});
-					panel.insertBefore(newGrid, toolbar.nextSibling);
-				}
+						});
+						panel.insertBefore(newGrid, toolbar.nextSibling);
+					}
 
-				/* sync button */
-				syncBtn.addEventListener('click', function () {
-					syncBtn.disabled = true;
-					api.post('/merchant/balance/sync', {})
+					/* sync button */
+					syncBtn.addEventListener('click', function () {
+						syncBtn.disabled = true;
+						api.post('/merchant/balance/sync', {})
+							.then(function (res) {
+								renderMoBalances(res);
+								syncBtn.disabled = false;
+							})
+							.catch(function (e) {
+								syncBtn.disabled = false;
+								panel.appendChild(alertBox('err', e.message));
+							});
+					});
+
+					/* initial load */
+					panel.appendChild(spinner());
+					api.get('/merchant/balance')
 						.then(function (res) {
+							var sp = panel.querySelector('.smlv-spin-wrap');
+							if (sp) sp.remove();
 							renderMoBalances(res);
-							syncBtn.disabled = false;
 						})
 						.catch(function (e) {
-							syncBtn.disabled = false;
+							var sp = panel.querySelector('.smlv-spin-wrap');
+							if (sp) sp.remove();
 							panel.appendChild(alertBox('err', e.message));
 						});
-				});
-
-				/* initial load */
-				panel.appendChild(spinner());
-				api.get('/merchant/balance')
-					.then(function (res) {
-						var sp = panel.querySelector('.smlv-spin-wrap');
-						if (sp) sp.remove();
-						renderMoBalances(res);
-					})
-					.catch(function (e) {
-						var sp = panel.querySelector('.smlv-spin-wrap');
-						if (sp) sp.remove();
-						panel.appendChild(alertBox('err', e.message));
-					});
 				} /* end renderMoBalancePanel */
 
 				/* ── Tab 2: Transactions ── */
@@ -1854,7 +1879,9 @@
 									listEl.appendChild(
 										h(
 											'p',
-											{ style: 'color:var(--smlv-muted);font-size:14px' },
+											{
+												style: 'color:var(--smlv-muted);font-size:14px',
+											},
 											t('noTransactions'),
 										),
 									);
@@ -1933,7 +1960,7 @@
 																			1,
 																		)
 																: tr;
-													})(tx.type)
+														})(tx.type)
 													: '\u2014',
 											),
 											h('td', {}, amtEl(tx.amount)),
@@ -2165,9 +2192,13 @@
 							]),
 						);
 						if (cfg.withdrawPrefill) {
-							if (cfg.withdrawPrefill.iban)             ibanInp.value  = cfg.withdrawPrefill.iban;
-							if (cfg.withdrawPrefill.bic)              bicInp.value   = cfg.withdrawPrefill.bic;
-							if (cfg.withdrawPrefill.beneficiary_name) benefInp.value = cfg.withdrawPrefill.beneficiary_name;
+							if (cfg.withdrawPrefill.iban)
+								ibanInp.value = cfg.withdrawPrefill.iban;
+							if (cfg.withdrawPrefill.bic)
+								bicInp.value = cfg.withdrawPrefill.bic;
+							if (cfg.withdrawPrefill.beneficiary_name)
+								benefInp.value =
+									cfg.withdrawPrefill.beneficiary_name;
 						}
 						var wErrBox = h('div', {});
 						withdrawModal.appendChild(wErrBox);

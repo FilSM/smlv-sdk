@@ -365,6 +365,10 @@ class SmlvWidgetGenerator
         if (!empty($options['is_merchant_owner'])) {
             $config['isMerchantOwner'] = true;
         }
+        // Pre-fill withdraw form fields (IBAN, BIC, beneficiary_name) from SaaS client data
+        if (!empty($options['withdraw_prefill']) && is_array($options['withdraw_prefill'])) {
+            $config['withdrawPrefill'] = $options['withdraw_prefill'];
+        }
 
         return $config;
     }
