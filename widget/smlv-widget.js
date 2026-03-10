@@ -920,6 +920,7 @@
 								h('th', {}, t('colDate')),
 								h('th', {}, t('colType')),
 								h('th', {}, t('colAmount')),
+								h('th', {}, t('colFee')),
 								h('th', {}, t('colCurrency')),
 								h('th', {}, t('colStatus')),
 							]),
@@ -933,6 +934,7 @@
 									h('td', {}, fmtDate(tx.created_at)),
 									h('td', {}, tx.type || '—'),
 									h('td', {}, amtEl(tx.amount)),
+									h('td', { style: 'color:var(--smlv-muted)' }, tx.fee != null && tx.fee > 0 ? fmtBal(tx.fee) : '—'),
 									h(
 										'td',
 										{},
@@ -943,11 +945,24 @@
 							}),
 						);
 
+						var stTotalAmt = items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
+						var stTotalFee = items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
+						var stTfoot = h('tfoot', {}, [
+							h('tr', { style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;' }, [
+								h('td', { colSpan: 2, style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);' }, t('colTotal')),
+								h('td', {}, amtEl(stTotalAmt)),
+								h('td', { style: 'color:var(--smlv-muted);' }, stTotalFee > 0 ? fmtBal(stTotalFee) : '—'),
+								h('td'),
+								h('td'),
+							]),
+						]);
+
 						card.appendChild(
 							h('div', { className: 'smlv-tbl-wrap' }, [
 								h('table', { className: 'smlv-tbl' }, [
 									thead,
 									tbody,
+									stTfoot,
 								]),
 							]),
 						);
@@ -1747,6 +1762,7 @@
 						{ key: 'created_at', label: t('colDate') },
 						{ key: 'type', label: t('colType') },
 						{ key: 'amount', label: t('colAmount') },
+						{ key: null, label: t('colFee') },
 						{ key: null, label: t('colCurrency') },
 						{ key: 'status', label: t('colStatus') },
 					];
@@ -1964,6 +1980,7 @@
 													: '\u2014',
 											),
 											h('td', {}, amtEl(tx.amount)),
+											h('td', { style: 'color:var(--smlv-muted)' }, tx.fee != null && tx.fee > 0 ? fmtBal(tx.fee) : '\u2014'),
 											h(
 												'td',
 												{},
@@ -1976,11 +1993,24 @@
 									}),
 								);
 
+								var moTotalAmt = items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
+								var moTotalFee = items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
+								var moTfoot = h('tfoot', {}, [
+									h('tr', { style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;' }, [
+										h('td', { colSpan: 2, style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);' }, t('colTotal')),
+										h('td', {}, amtEl(moTotalAmt)),
+										h('td', { style: 'color:var(--smlv-muted);' }, moTotalFee > 0 ? fmtBal(moTotalFee) : '\u2014'),
+										h('td'),
+										h('td'),
+									]),
+								]);
+
 								listEl.appendChild(
 									h('div', { className: 'smlv-tbl-wrap' }, [
 										h('table', { className: 'smlv-tbl' }, [
 											h('thead', {}, theadRow),
 											tbody,
+											moTfoot,
 										]),
 									]),
 								);
@@ -2445,6 +2475,7 @@
 						{ key: 'created_at', label: t('colDate') },
 						{ key: 'type', label: t('colType') },
 						{ key: 'amount', label: t('colAmount') },
+						{ key: null, label: t('colFee') },
 						{ key: null, label: t('colCurrency') },
 						{ key: 'status', label: t('colStatus') },
 					];
@@ -2663,6 +2694,7 @@
 													: '\u2014',
 											),
 											h('td', {}, amtEl(tx.amount)),
+											h('td', { style: 'color:var(--smlv-muted)' }, tx.fee != null && tx.fee > 0 ? fmtBal(tx.fee) : '\u2014'),
 											h(
 												'td',
 												{},
@@ -2675,11 +2707,24 @@
 									}),
 								);
 
+								var rtTotalAmt = items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
+								var rtTotalFee = items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
+								var rtTfoot = h('tfoot', {}, [
+									h('tr', { style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;' }, [
+										h('td', { colSpan: 2, style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);' }, t('colTotal')),
+										h('td', {}, amtEl(rtTotalAmt)),
+										h('td', { style: 'color:var(--smlv-muted);' }, rtTotalFee > 0 ? fmtBal(rtTotalFee) : '\u2014'),
+										h('td'),
+										h('td'),
+									]),
+								]);
+
 								listEl.appendChild(
 									h('div', { className: 'smlv-tbl-wrap' }, [
 										h('table', { className: 'smlv-tbl' }, [
 											h('thead', {}, theadRow),
 											tbody,
+											rtTfoot,
 										]),
 									]),
 								);
