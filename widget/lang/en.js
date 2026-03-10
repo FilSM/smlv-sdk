@@ -47,6 +47,7 @@ window.SmlvWidgetI18n['en'] = {
 	pageOf: 'Page {page} of {total}',
 	filterType: 'Type',
 	filterStatus: 'Status',
+	filterCurrency: 'Currency',
 	filterDateFrom: 'From',
 	filterDateTo: 'To',
 	filterReset: 'Reset',

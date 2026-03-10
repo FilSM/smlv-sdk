@@ -47,6 +47,7 @@ window.SmlvWidgetI18n['lv'] = {
 	pageOf: 'Lappuse {page} no {total}',
 	filterType: 'Veids',
 	filterStatus: 'Statuss',
+	filterCurrency: 'Val\u016bta',
 	filterDateFrom: 'No',
 	filterDateTo: 'Līdz',
 	filterReset: 'Atiestatīt',

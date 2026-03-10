@@ -934,7 +934,13 @@
 									h('td', {}, fmtDate(tx.created_at)),
 									h('td', {}, tx.type || '—'),
 									h('td', {}, amtEl(tx.amount)),
-									h('td', { style: 'color:var(--smlv-muted)' }, tx.fee != null && tx.fee > 0 ? fmtBal(tx.fee) : '—'),
+									h(
+										'td',
+										{ style: 'color:var(--smlv-muted)' },
+										tx.fee != null && tx.fee > 0
+											? fmtBal(tx.fee)
+											: '—',
+									),
 									h(
 										'td',
 										{},
@@ -945,16 +951,39 @@
 							}),
 						);
 
-						var stTotalAmt = items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
-						var stTotalFee = items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
+						var stTotalAmt = items.reduce(function (s, tx) {
+							return s + (tx.amount || 0);
+						}, 0);
+						var stTotalFee = items.reduce(function (s, tx) {
+							return s + (tx.fee || 0);
+						}, 0);
 						var stTfoot = h('tfoot', {}, [
-							h('tr', { style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;' }, [
-								h('td', { colSpan: 2, style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);' }, t('colTotal')),
-								h('td', {}, amtEl(stTotalAmt)),
-								h('td', { style: 'color:var(--smlv-muted);' }, stTotalFee > 0 ? fmtBal(stTotalFee) : '—'),
-								h('td'),
-								h('td'),
-							]),
+							h(
+								'tr',
+								{
+									style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;',
+								},
+								[
+									h(
+										'td',
+										{
+											colSpan: 2,
+											style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);',
+										},
+										t('colTotal'),
+									),
+									h('td', {}, amtEl(stTotalAmt)),
+									h(
+										'td',
+										{ style: 'color:var(--smlv-muted);' },
+										stTotalFee > 0
+											? fmtBal(stTotalFee)
+											: '—',
+									),
+									h('td'),
+									h('td'),
+								],
+							),
 						]);
 
 						card.appendChild(
@@ -1757,18 +1786,40 @@
 					var txStatus = '';
 					var txDateFrom = '';
 					var txDateTo = '';
+					var txCurrency = '';
 
 					var COLS = [
 						{ key: 'created_at', label: t('colDate') },
 						{ key: 'type', label: t('colType') },
 						{ key: 'amount', label: t('colAmount') },
-						{ key: null, label: t('colFee') },
-						{ key: null, label: t('colCurrency') },
+						{ key: 'fee', label: t('colFee') },
+						{ key: 'currency', label: t('colCurrency') },
 						{ key: 'status', label: t('colStatus') },
 					];
 
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
+					var selCurrency = document.createElement('select');
+					(function () {
+						var opt = document.createElement('option');
+						opt.value = '';
+						opt.textContent = t('allOption');
+						selCurrency.appendChild(opt);
+						api.get('/config')
+							.then(function (res) {
+								var curs =
+									res && res.data && res.data.currencies
+										? res.data.currencies
+										: [];
+								curs.forEach(function (c) {
+									var o = document.createElement('option');
+									o.value = c.code;
+									o.textContent = c.code;
+									selCurrency.appendChild(o);
+								});
+							})
+							.catch(function () {});
+					})();
 					var inpFrom = document.createElement('input');
 					var inpTo = document.createElement('input');
 					inpFrom.type = 'text';
@@ -1811,6 +1862,7 @@
 					function onFlt() {
 						txType = selType.value;
 						txStatus = selStatus.value;
+						txCurrency = selCurrency.value;
 						txDateFrom =
 							inpFrom.value && dateRe.test(inpFrom.value)
 								? inpFrom.value
@@ -1824,6 +1876,7 @@
 					}
 					selType.addEventListener('change', onFlt);
 					selStatus.addEventListener('change', onFlt);
+					selCurrency.addEventListener('change', onFlt);
 					var rstBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
@@ -1832,6 +1885,7 @@
 					rstBtn.addEventListener('click', function () {
 						selType.value = '';
 						selStatus.value = '';
+						selCurrency.value = '';
 						if (inpFrom._fp) {
 							inpFrom._fp.clear(false);
 						} else {
@@ -1844,6 +1898,7 @@
 						}
 						txType = '';
 						txStatus = '';
+						txCurrency = '';
 						txDateFrom = '';
 						txDateTo = '';
 						txPage = 1;
@@ -1853,6 +1908,7 @@
 						h('div', { className: 'smlv-fltr' }, [
 							h('label', {}, [t('filterType'), selType]),
 							h('label', {}, [t('filterStatus'), selStatus]),
+							h('label', {}, [t('filterCurrency'), selCurrency]),
 							h('label', {}, [t('filterDateFrom'), inpFrom]),
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
@@ -1876,6 +1932,7 @@
 						if (txStatus) params.status = txStatus;
 						if (txDateFrom) params.date_from = txDateFrom;
 						if (txDateTo) params.date_to = txDateTo;
+						if (txCurrency) params.currency = txCurrency;
 						api.get('/transactions', params)
 							.then(function (res) {
 								if (seq !== txSeq) return;
@@ -1980,7 +2037,15 @@
 													: '\u2014',
 											),
 											h('td', {}, amtEl(tx.amount)),
-											h('td', { style: 'color:var(--smlv-muted)' }, tx.fee != null && tx.fee > 0 ? fmtBal(tx.fee) : '\u2014'),
+											h(
+												'td',
+												{
+													style: 'color:var(--smlv-muted)',
+												},
+												tx.fee != null && tx.fee > 0
+													? fmtBal(tx.fee)
+													: '\u2014',
+											),
 											h(
 												'td',
 												{},
@@ -1993,16 +2058,41 @@
 									}),
 								);
 
-								var moTotalAmt = items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
-								var moTotalFee = items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
+								var moTotalAmt = items.reduce(function (s, tx) {
+									return s + (tx.amount || 0);
+								}, 0);
+								var moTotalFee = items.reduce(function (s, tx) {
+									return s + (tx.fee || 0);
+								}, 0);
 								var moTfoot = h('tfoot', {}, [
-									h('tr', { style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;' }, [
-										h('td', { colSpan: 2, style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);' }, t('colTotal')),
-										h('td', {}, amtEl(moTotalAmt)),
-										h('td', { style: 'color:var(--smlv-muted);' }, moTotalFee > 0 ? fmtBal(moTotalFee) : '\u2014'),
-										h('td'),
-										h('td'),
-									]),
+									h(
+										'tr',
+										{
+											style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;',
+										},
+										[
+											h(
+												'td',
+												{
+													colSpan: 2,
+													style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);',
+												},
+												t('colTotal'),
+											),
+											h('td', {}, amtEl(moTotalAmt)),
+											h(
+												'td',
+												{
+													style: 'color:var(--smlv-muted);',
+												},
+												moTotalFee > 0
+													? fmtBal(moTotalFee)
+													: '\u2014',
+											),
+											h('td'),
+											h('td'),
+										],
+									),
 								]);
 
 								listEl.appendChild(
@@ -2470,19 +2560,41 @@
 					var txStatus = '';
 					var txDateFrom = '';
 					var txDateTo = '';
+					var txCurrency = '';
 
 					var COLS = [
 						{ key: 'created_at', label: t('colDate') },
 						{ key: 'type', label: t('colType') },
 						{ key: 'amount', label: t('colAmount') },
-						{ key: null, label: t('colFee') },
-						{ key: null, label: t('colCurrency') },
+						{ key: 'fee', label: t('colFee') },
+						{ key: 'currency', label: t('colCurrency') },
 						{ key: 'status', label: t('colStatus') },
 					];
 
 					// Filter bar
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
+					var selCurrency = document.createElement('select');
+					(function () {
+						var opt = document.createElement('option');
+						opt.value = '';
+						opt.textContent = t('allOption');
+						selCurrency.appendChild(opt);
+						api.get('/config')
+							.then(function (res) {
+								var curs =
+									res && res.data && res.data.currencies
+										? res.data.currencies
+										: [];
+								curs.forEach(function (c) {
+									var o = document.createElement('option');
+									o.value = c.code;
+									o.textContent = c.code;
+									selCurrency.appendChild(o);
+								});
+							})
+							.catch(function () {});
+					})();
 					var inpFrom = document.createElement('input');
 					var inpTo = document.createElement('input');
 					inpFrom.type = 'text';
@@ -2525,6 +2637,7 @@
 					function onFlt() {
 						txType = selType.value;
 						txStatus = selStatus.value;
+						txCurrency = selCurrency.value;
 						txDateFrom =
 							inpFrom.value && dateRe.test(inpFrom.value)
 								? inpFrom.value
@@ -2538,6 +2651,7 @@
 					}
 					selType.addEventListener('change', onFlt);
 					selStatus.addEventListener('change', onFlt);
+					selCurrency.addEventListener('change', onFlt);
 					var rstBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
@@ -2546,6 +2660,7 @@
 					rstBtn.addEventListener('click', function () {
 						selType.value = '';
 						selStatus.value = '';
+						selCurrency.value = '';
 						if (inpFrom._fp) {
 							inpFrom._fp.clear(false);
 						} else {
@@ -2558,6 +2673,7 @@
 						}
 						txType = '';
 						txStatus = '';
+						txCurrency = '';
 						txDateFrom = '';
 						txDateTo = '';
 						txPage = 1;
@@ -2567,6 +2683,7 @@
 						h('div', { className: 'smlv-fltr' }, [
 							h('label', {}, [t('filterType'), selType]),
 							h('label', {}, [t('filterStatus'), selStatus]),
+							h('label', {}, [t('filterCurrency'), selCurrency]),
 							h('label', {}, [t('filterDateFrom'), inpFrom]),
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
@@ -2590,6 +2707,7 @@
 						if (txStatus) params.status = txStatus;
 						if (txDateFrom) params.date_from = txDateFrom;
 						if (txDateTo) params.date_to = txDateTo;
+						if (txCurrency) params.currency = txCurrency;
 						api.get('/transactions', params)
 							.then(function (res) {
 								if (seq !== txSeq) return;
@@ -2694,7 +2812,15 @@
 													: '\u2014',
 											),
 											h('td', {}, amtEl(tx.amount)),
-											h('td', { style: 'color:var(--smlv-muted)' }, tx.fee != null && tx.fee > 0 ? fmtBal(tx.fee) : '\u2014'),
+											h(
+												'td',
+												{
+													style: 'color:var(--smlv-muted)',
+												},
+												tx.fee != null && tx.fee > 0
+													? fmtBal(tx.fee)
+													: '\u2014',
+											),
 											h(
 												'td',
 												{},
@@ -2707,16 +2833,41 @@
 									}),
 								);
 
-								var rtTotalAmt = items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
-								var rtTotalFee = items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
+								var rtTotalAmt = items.reduce(function (s, tx) {
+									return s + (tx.amount || 0);
+								}, 0);
+								var rtTotalFee = items.reduce(function (s, tx) {
+									return s + (tx.fee || 0);
+								}, 0);
 								var rtTfoot = h('tfoot', {}, [
-									h('tr', { style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;' }, [
-										h('td', { colSpan: 2, style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);' }, t('colTotal')),
-										h('td', {}, amtEl(rtTotalAmt)),
-										h('td', { style: 'color:var(--smlv-muted);' }, rtTotalFee > 0 ? fmtBal(rtTotalFee) : '\u2014'),
-										h('td'),
-										h('td'),
-									]),
+									h(
+										'tr',
+										{
+											style: 'border-top:2px solid var(--smlv-border);font-weight:700;font-size:12px;',
+										},
+										[
+											h(
+												'td',
+												{
+													colSpan: 2,
+													style: 'text-align:right;padding-right:8px;color:var(--smlv-muted);',
+												},
+												t('colTotal'),
+											),
+											h('td', {}, amtEl(rtTotalAmt)),
+											h(
+												'td',
+												{
+													style: 'color:var(--smlv-muted);',
+												},
+												rtTotalFee > 0
+													? fmtBal(rtTotalFee)
+													: '\u2014',
+											),
+											h('td'),
+											h('td'),
+										],
+									),
 								]);
 
 								listEl.appendChild(

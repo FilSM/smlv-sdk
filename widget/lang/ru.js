@@ -63,6 +63,7 @@ window.SmlvWidgetI18n['ru'] = {
 	pageOf: '\u0421\u0442\u0440\u0430\u043d\u0438\u0446\u0430 {page} \u0438\u0437 {total}',
 	filterType: '\u0422\u0438\u043f',
 	filterStatus: '\u0421\u0442\u0430\u0442\u0443\u0441',
+	filterCurrency: '\u0412\u0430\u043b\u044e\u0442\u0430',
 	filterDateFrom: '\u0421',
 	filterDateTo: '\u041f\u043e',
 	filterReset: '\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c',
