@@ -1805,7 +1805,7 @@
 						opt.value = '';
 						opt.textContent = t('allOption');
 						selCurrency.appendChild(opt);
-						api.get('/config')
+						api.get('/currencies')
 							.then(function (res) {
 								var curs =
 									res && res.data && res.data.currencies
@@ -2580,7 +2580,7 @@
 						opt.value = '';
 						opt.textContent = t('allOption');
 						selCurrency.appendChild(opt);
-						api.get('/config')
+						api.get('/currencies')
 							.then(function (res) {
 								var curs =
 									res && res.data && res.data.currencies
