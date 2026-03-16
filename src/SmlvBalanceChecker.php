@@ -41,7 +41,7 @@ class SmlvBalanceChecker
     {
         try {
             $balance = $this->getBalance($accountReference);
-            return $balance > $minAmount;
+            return $balance >= $minAmount;
         } catch (SmlvApiException $e) {
             // If account not found or API error, assume no balance
             return false;
@@ -66,10 +66,11 @@ class SmlvBalanceChecker
         // Fetch from API
         $response = $this->client->getBalance($accountReference);
 
-        // Extract balance (assuming first currency for SaaS)
+        // Extract available balance from first currency entry.
+        // API response: data.balances[].available_balance
         $balance = 0;
-        if (isset($response['data']['balances'][0]['balance'])) {
-            $balance = (float) $response['data']['balances'][0]['balance'];
+        if (isset($response['data']['balances'][0]['available_balance'])) {
+            $balance = (float) $response['data']['balances'][0]['available_balance'];
         }
 
         // Cache the result
