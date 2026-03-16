@@ -17,6 +17,9 @@ class SmlvBalanceChecker
     /** @var int Cache TTL in seconds */
     private $cacheTtl;
 
+    /** @var string Default currency code for transactions */
+    private $currency;
+
     /** @var array In-memory cache */
     private $cache = [];
 
@@ -26,8 +29,9 @@ class SmlvBalanceChecker
      */
     public function __construct(SmlvClient $client, array $options = [])
     {
-        $this->client = $client;
+        $this->client   = $client;
         $this->cacheTtl = $options['cache_ttl'] ?? 300; // 5 minutes default
+        $this->currency = $options['currency'] ?? 'SMLV';
     }
 
     /**
@@ -114,11 +118,11 @@ class SmlvBalanceChecker
 
         // Create debit transaction
         $result = $this->client->createTransaction($accountReference, [
-            'type' => 'debit',
-            'amount' => $amount,
-            'currency' => 'EUR', // Default currency for SaaS
+            'type'        => 'debit',
+            'amount'      => $amount,
+            'currency'    => $this->currency,
             'description' => $description,
-            'metadata' => $metadata,
+            'metadata'    => $metadata,
         ]);
 
         // Clear cache after transaction
@@ -144,11 +148,11 @@ class SmlvBalanceChecker
         array $metadata = []
     ): bool {
         $result = $this->client->createTransaction($accountReference, [
-            'type' => 'credit',
-            'amount' => $amount,
-            'currency' => 'EUR',
+            'type'        => 'credit',
+            'amount'      => $amount,
+            'currency'    => $this->currency,
             'description' => $description,
-            'metadata' => $metadata,
+            'metadata'    => $metadata,
         ]);
 
         // Clear cache after transaction

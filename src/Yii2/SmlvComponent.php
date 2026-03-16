@@ -65,6 +65,12 @@ class SmlvComponent extends Component
     public $balanceCacheTtl = 300;
 
     /**
+     * @var string Default currency code for debit/credit transactions.
+     * Must match the SaaS account's operating currency in SMLV.
+     */
+    public $currency = 'SMLV';
+
+    /**
      * @var SmlvClient
      */
     private $_client;
@@ -134,7 +140,7 @@ class SmlvComponent extends Component
         if ($this->_balanceChecker === null) {
             $this->_balanceChecker = new SmlvBalanceChecker(
                 $this->getClient(),
-                ['cache_ttl' => $this->balanceCacheTtl]
+                ['cache_ttl' => $this->balanceCacheTtl, 'currency' => $this->currency]
             );
         }
 
