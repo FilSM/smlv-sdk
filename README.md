@@ -50,12 +50,12 @@ use Smlv\Sdk\SmlvWidgetGenerator;
 
 $widget = new SmlvWidgetGenerator($smlv);
 
-// $subscriber->id — ID абонента в вашей системе.
-// Один user может иметь несколько абонентов — передавайте ID абонента, не ID пользователя!
+// $subscriber->id — the subscriber ID in your system.
+// One user may have multiple subscribers — pass the subscriber ID, not the user ID!
 //
-// email — необязателен, используется только для предзаполнения формы создания аккаунта при первом визите.
-// Рекомендуемый порядок: 1) email главного контакта абонента, 2) email текущего пользователя.
-// Если email неизвестен — передайте пустую строку.
+// email — optional, used only to pre-fill the account creation form on first visit.
+// Recommended order: 1) main contact email of the subscriber, 2) current user's email.
+// If email is unknown — pass an empty string.
 
 echo $widget->generateDepositWidget(
     externalSubscriberId: (string) $subscriber->id,
@@ -244,7 +244,7 @@ $this->app->singleton(SmlvClient::class, fn() => new SmlvClient(
 ```php
 
 // In a controller/view
-// $subscriber — абонент (не $user!). Один user может иметь несколько абонентов
+// $subscriber — the subscriber (not $user!). One user may have multiple subscribers.
 echo Yii::$app->smlv->widget->generateDepositWidget(
     (string) $subscriber->id,
     $subscriber->email,

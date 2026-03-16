@@ -17,7 +17,7 @@ composer require smlv/sdk
 
 ## Step 2 — Register SMLV component (Yii2)
 
-Добавьте компонент в `common/config/main-local.php` (этот файл уже есть в `.gitignore` шаблона — безопасное место для секретов):
+Add the component to `common/config/main-local.php` (already listed in `.gitignore` by the Yii2 advanced template — the safe place for secrets):
 
 ```php
 // common/config/main-local.php
@@ -34,7 +34,7 @@ return [
 ];
 ```
 
-> Замените значения на реальные ключи из вашего SMLV личного кабинета. Не коммитьте `main-local.php` в репозиторий.
+> Replace the placeholder values with real keys from your SMLV dashboard. Never commit `main-local.php` to version control.
 
 ## Step 3 — Billing page controller
 
@@ -54,10 +54,10 @@ class BillingController extends Controller
         $smlv   = Yii::$app->smlv->getClient();
         $widget = new SmlvWidgetGenerator($smlv);
 
-        // Абонент не хранит email напрямую. Стратегия получения email:
-        // 1) email главного контакта (контактное лицо абонента)
-        // 2) email текущего пользователя eGram
-        // 3) пустая строка — виджет сам попросит ввести
+        // The subscriber object may not have email directly. Resolution strategy:
+        // 1) email of the main contact of the subscriber
+        // 2) email of the currently authenticated user
+        // 3) empty string — the widget will prompt the user to enter it
         $subscriber = $this->loadCurrentSubscriber();
         $email = $subscriber->mainClient->clientMainContact->email
             ?? Yii::$app->user->identity->email
