@@ -9,68 +9,82 @@ use yii\db\ActiveRecord;
 /**
  * Yii2 Behavior — автоматическое списание SMLV-депозита при сохранении модели.
  *
- * Подключается к модели, реализующей SmlvChargeable:
+ * Настраивается через callable-свойства. Никакой SDK-интерфейс модели не навязывается.
  *
- *   use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+ * Пример:
  *
  *   public function behaviors(): array
  *   {
  *       return ArrayHelper::merge(parent::behaviors(), [
- *           'smlvCharge' => SmlvChargeBehavior::class,
+ *           'smlvCharge' => [
+ *               'class'       => \Smlv\Sdk\Yii2\SmlvChargeBehavior::class,
+ *               'email'       => fn() => $this->user->email,
+ *               'amount'      => fn() => $this->price,
+ *               'description' => fn() => 'Order #' . $this->id,
+ *               'metadata'    => fn() => ['order_id' => $this->id],
+ *           ],
  *       ]);
  *   }
- *
- * Вся бизнес-логика (сумма, email, описание) — в модели через интерфейс SmlvChargeable.
- * Этот behavior только оркеструет вызов и не содержит SaaS-специфики.
  */
 class SmlvChargeBehavior extends Behavior
 {
+    /** @var callable|string|null Email абонента для поиска депозита. */
+    public $email = null;
+
+    /** @var callable|float|null Сумма списания. null или <= 0 — пропустить. */
+    public $amount = null;
+
+    /** @var callable|string Описание транзакции. */
+    public $description = '';
+
+    /** @var callable|array Метаданные транзакции. */
+    public $metadata = [];
+
     public function events(): array
     {
         return [
-            ActiveRecord::EVENT_AFTER_INSERT => 'onAfterInsert',
+            ActiveRecord::EVENT_AFTER_INSERT => 'charge',
         ];
     }
 
-    public function onAfterInsert($event): void
+    public function charge(): void
     {
-        $model = $this->owner;
-
-        // Модель должна реализовывать интерфейс SmlvChargeable
-        if (!($model instanceof SmlvChargeable)) {
-            Yii::warning(
-                get_class($model) . ' uses SmlvChargeBehavior but does not implement SmlvChargeable. Skipping charge.',
-                'smlv'
-            );
-            return;
-        }
-
-        // SMLV компонент должен быть настроен (нет в консоли или dev-окружении без конфига)
         if (!Yii::$app->has('smlv')) {
             return;
         }
 
-        $email = $model->getChargeEmail();
+        $email = $this->resolve($this->email);
         if (empty($email)) {
             return;
         }
 
-        $amount = $model->getChargeAmount();
-        if ($amount === null || $amount <= 0) {
+        $amount = $this->resolve($this->amount);
+        if ($amount === null || (float) $amount <= 0) {
             return;
         }
 
-        $description = $model->getChargeDescription();
-        $metadata    = $model->getChargeMetadata();
+        $description = $this->resolve($this->description);
+        $metadata    = $this->resolve($this->metadata);
 
         try {
-            Yii::$app->smlv->billing->chargeByEmail($email, $amount, $description, $metadata);
+            Yii::$app->smlv->billing->chargeByEmail(
+                $email,
+                (float) $amount,
+                (string) $description,
+                (array) $metadata
+            );
         } catch (\Throwable $e) {
+            $model = $this->owner;
             Yii::error(
                 'SmlvChargeBehavior: failed to charge ' . get_class($model) . ' #' . ($model->id ?? '?')
                 . ' email=' . $email . ' amount=' . $amount . ': ' . $e->getMessage(),
                 'smlv'
             );
         }
+    }
+
+    protected function resolve($value)
+    {
+        return is_callable($value) ? call_user_func($value) : $value;
     }
 }

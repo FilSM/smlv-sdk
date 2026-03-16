@@ -220,6 +220,61 @@ Configure the webhook URL in your SMLV dashboard:
 https://your-app.com/webhooks/smlv
 ```
 
+## Step 7 — Auto-charge on model save (optional)
+
+If your SaaS charges a deposit fee whenever a user creates a document (order, invoice, etc.), attach `SmlvChargeBehavior` directly to that model. No interface, no base class — just configure callables:
+
+```php
+// common/models/Order.php  (or any AR model)
+namespace common\models;
+
+use yii\db\ActiveRecord;
+use yii\helpers\ArrayHelper;
+use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+
+class Order extends ActiveRecord
+{
+    public function behaviors(): array
+    {
+        return ArrayHelper::merge(parent::behaviors(), [
+            'smlvCharge' => [
+                'class' => SmlvChargeBehavior::class,
+
+                // Required: email of the account to charge
+                'email' => fn() => $this->owner->email,
+                //          ^^ can be any expression that resolves to a string
+
+                // Required: amount to deduct (null or 0 = skip)
+                'amount' => fn() => $this->plan->charge_amount,
+
+                // Optional: shown in SMLV transaction history
+                'description' => fn() => 'Order #' . $this->id,
+
+                // Optional: arbitrary key-value stored with the transaction
+                'metadata' => fn() => [
+                    'order_id' => $this->id,
+                    'model'    => static::class,
+                    'source'   => 'my-saas',
+                ],
+            ],
+        ]);
+    }
+}
+```
+
+**Behavior contract:**
+
+| Condition | Result |
+|---|---|
+| `smlv` component absent from app config | Silently skipped — safe in CLI / test environments |
+| `email` resolves to empty string / null | Silently skipped |
+| `amount` resolves to null, 0 or negative | Silently skipped |
+| API call throws | Logged to `smlv` channel, **save is NOT rolled back** |
+
+> **Note:** The behavior fires on `EVENT_AFTER_INSERT` only — edits to existing records do not trigger a charge.
+
+---
+
 ## What you did NOT need to do
 
 | Old approach                            | New approach  |

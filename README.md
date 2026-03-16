@@ -272,6 +272,44 @@ echo $widget->generateInitSnippet(
 $token = $widget->generateToken($subscriber->id, $email, 'deposit');
 ```
 
+## Auto-charge Behavior (Yii2)
+
+`SmlvChargeBehavior` deducts a deposit automatically every time a model is saved (`EVENT_AFTER_INSERT`). All data is provided via callables — **no interface implementation required** in your model.
+
+```php
+use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+
+class Order extends ActiveRecord
+{
+    public function behaviors(): array
+    {
+        return [
+            'smlvCharge' => [
+                'class'       => SmlvChargeBehavior::class,
+                'email'       => fn() => $this->user->email,
+                'amount'      => fn() => $this->subtotal * 0.02,   // e.g. 2% fee
+                'description' => fn() => 'Order #' . $this->id,
+                'metadata'    => fn() => [
+                    'order_id' => $this->id,
+                    'plan'     => $this->plan_name,
+                ],
+            ],
+        ];
+    }
+}
+```
+
+**How it works:**
+
+1. After `$order->save()`, the behavior calls `Yii::$app->smlv->billing->chargeByEmail()`
+2. If the `smlv` component is not configured (console, test, dev without config) — silently skipped
+3. If `email` or `amount` resolves to empty / zero — silently skipped
+4. Errors are logged to `Yii::error(..., 'smlv')` and do not break the original save
+
+> **Tip:** All four properties (`email`, `amount`, `description`, `metadata`) accept either a `callable` or a scalar value. Use callables when you need `$this` context.
+
+---
+
 ## Security
 
 - All API requests are signed with HMAC-SHA256 (`X-API-Key`, `X-Signature`, `X-Timestamp`)

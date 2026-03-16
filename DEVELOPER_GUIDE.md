@@ -12,11 +12,12 @@ Complete reference for integrating SMLV billing into your SaaS application.
 6. [Advanced Widget Usage](#advanced-widget-usage)
 7. [Framework Integration](#framework-integration)
 8. [Headless API (SmlvClient)](#headless-api-smlvclient)
-9. [Webhook Handling](#webhook-handling)
-10. [Security](#security)
-11. [Testing](#testing)
-12. [Migration from v1.x](#migration-from-v1x)
-13. [Troubleshooting](#troubleshooting)
+9. [Auto-charge Behavior (Yii2)](#auto-charge-behavior-yii2)
+10. [Webhook Handling](#webhook-handling)
+11. [Security](#security)
+12. [Testing](#testing)
+13. [Migration from v1.x](#migration-from-v1x)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -502,6 +503,106 @@ $token = $smlv->generateWidgetToken(
     options:        ['theme' => 'dark'],
     prefill:        ['first_name' => 'John']
 );
+```
+
+---
+
+## Auto-charge Behavior (Yii2)
+
+`SmlvChargeBehavior` deducts a deposit automatically on `EVENT_AFTER_INSERT`. It requires **no interface implementation** — everything is configured via callables directly in `behaviors()`.
+
+### Minimal example
+
+```php
+use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+
+class Order extends \yii\db\ActiveRecord
+{
+    public function behaviors(): array
+    {
+        return [
+            'smlvCharge' => [
+                'class'  => SmlvChargeBehavior::class,
+                'email'  => fn() => $this->user->email,
+                'amount' => fn() => $this->total_amount,
+            ],
+        ];
+    }
+}
+```
+
+### All options
+
+| Property      | Type                    | Required | Description                                               |
+|---------------|-------------------------|----------|-----------------------------------------------------------|
+| `email`       | `callable\|string`      | Yes      | Email of the SMLV account to charge                       |
+| `amount`      | `callable\|float`       | Yes      | Amount to deduct; `null` / `<= 0` skips the charge       |
+| `description` | `callable\|string`      | No       | Text shown in SMLV transaction history                    |
+| `metadata`    | `callable\|array`       | No       | Arbitrary key-value stored alongside the transaction      |
+
+### Full example — SaaS Order model
+
+```php
+use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+use yii\helpers\ArrayHelper;
+
+class Order extends \yii\db\ActiveRecord
+{
+    public function behaviors(): array
+    {
+        return ArrayHelper::merge(parent::behaviors(), [
+            'smlvCharge' => [
+                'class' => SmlvChargeBehavior::class,
+
+                // Email of the subscriber who will be charged
+                'email' => fn() => $this->subscriber->mainEmail,
+
+                // Dynamic amount — e.g. a flat fee per order line item
+                'amount' => fn() => count($this->items) * 0.50,
+
+                // Description visible in SMLV transaction log
+                'description' => fn() => 'Order #' . $this->id . ' (' . $this->status . ')',
+
+                // Free-form metadata for your own reporting
+                'metadata' => fn() => [
+                    'order_id'    => $this->id,
+                    'plan'        => $this->subscriber->plan_name,
+                    'items_count' => count($this->items),
+                    'source'      => 'my-saas',
+                ],
+            ],
+        ]);
+    }
+}
+```
+
+### Silent skip conditions
+
+The behavior will silently do nothing if:
+
+- `Yii::$app->has('smlv')` returns `false` *(CLI, test, dev without config)*
+- `email` resolves to `null` or empty string
+- `amount` resolves to `null`, `0`, or negative
+
+Errors from the SMLV API are caught, logged to the `smlv` channel (`Yii::error(..., 'smlv')`), and **never break the original AR save** — the charge is best-effort.
+
+### Non-Yii2 frameworks
+
+The behavior is Yii2-specific. For Laravel, hook into model events directly:
+
+```php
+// Laravel — AppServiceProvider::boot() or model's boot()
+Order::created(function (Order $order) {
+    if (!$order->user?->email || !$order->amount) {
+        return;
+    }
+    app(SmlvBillingService::class)->chargeByEmail(
+        $order->user->email,
+        $order->amount,
+        'Order #' . $order->id,
+        ['order_id' => $order->id]
+    );
+});
 ```
 
 ---
