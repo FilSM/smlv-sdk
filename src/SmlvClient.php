@@ -61,7 +61,7 @@ class SmlvClient
     {
         $this->validateAccountData($data);
 
-        return $this->request('POST', '/v1/accounts', $data);
+        return $this->request('POST', '/v1/account/create', $data);
     }
 
     /**
@@ -73,7 +73,7 @@ class SmlvClient
      */
     public function getAccount(string $accountReference): array
     {
-        return $this->request('GET', "/v1/accounts/{$accountReference}");
+        return $this->request('GET', "/v1/account/{$accountReference}");
     }
 
     /**
@@ -86,7 +86,7 @@ class SmlvClient
      */
     public function updateAccount(string $accountReference, array $data): array
     {
-        return $this->request('PATCH', "/v1/accounts/{$accountReference}", $data);
+        return $this->request('PATCH', "/v1/account/{$accountReference}", $data);
     }
 
     /**
@@ -98,7 +98,7 @@ class SmlvClient
      */
     public function closeAccount(string $accountReference): array
     {
-        return $this->request('POST', "/v1/accounts/{$accountReference}/close");
+        return $this->request('DELETE', "/v1/account/{$accountReference}");
     }
 
     /**
@@ -111,7 +111,7 @@ class SmlvClient
      */
     public function reactivateAccount(string $accountReference, array $data = []): array
     {
-        return $this->request('POST', "/v1/accounts/{$accountReference}/reactivate", $data);
+        return $this->request('POST', "/v1/account/{$accountReference}/reactivate", $data);
     }
 
     /**
@@ -123,7 +123,7 @@ class SmlvClient
      */
     public function getBalance(string $accountReference): array
     {
-        return $this->request('GET', "/v1/accounts/{$accountReference}/balance");
+        return $this->request('GET', "/v1/balance/{$accountReference}");
     }
 
     /**
@@ -135,7 +135,7 @@ class SmlvClient
      */
     public function syncBalance(string $accountReference): array
     {
-        return $this->request('POST', "/v1/accounts/{$accountReference}/balance/sync");
+        return $this->request('POST', "/v1/balance/{$accountReference}/sync");
     }
 
     /**
@@ -148,7 +148,10 @@ class SmlvClient
      */
     public function createTransaction(string $accountReference, array $data): array
     {
-        return $this->request('POST', "/v1/accounts/{$accountReference}/transactions", $data);
+        $type = $data['type'] ?? 'debit';
+        unset($data['type']);
+        // Route to type-specific endpoint: /v1/balance/{ref}/debit or /credit
+        return $this->request('POST', "/v1/balance/{$accountReference}/{$type}", $data);
     }
 
     /**
@@ -162,7 +165,7 @@ class SmlvClient
     public function getTransactions(string $accountReference, array $filters = []): array
     {
         $query = http_build_query($filters);
-        $endpoint = "/v1/accounts/{$accountReference}/transactions" . ($query ? "?{$query}" : '');
+        $endpoint = "/v1/balance/{$accountReference}/history" . ($query ? "?{$query}" : '');
 
         return $this->request('GET', $endpoint);
     }
@@ -177,7 +180,7 @@ class SmlvClient
     public function findAccountByEmail(string $email): ?array
     {
         try {
-            $response = $this->request('GET', '/v1/accounts/search', ['email' => $email]);
+            $response = $this->request('GET', '/v1/account/find-by-email?email=' . urlencode($email));
             return $response['data'] ?? null;
         } catch (SmlvApiException $e) {
             if ($e->getCode() === 404) {

@@ -8,6 +8,7 @@ use Firebase\JWT\JWT;
 
 use Smlv\Sdk\SmlvClient;
 use Smlv\Sdk\SmlvBalanceChecker;
+use Smlv\Sdk\SmlvBillingService;
 use Smlv\Sdk\SmlvWebhookHandler;
 use Smlv\Sdk\SmlvWidgetGenerator;
 
@@ -82,6 +83,11 @@ class SmlvComponent extends Component
      * @var SmlvWebhookHandler
      */
     private $_webhookHandler;
+
+    /**
+     * @var SmlvBillingService
+     */
+    private $_billingService;
 
     /**
      * {@inheritdoc}
@@ -166,6 +172,37 @@ class SmlvComponent extends Component
         }
 
         return $this->_webhookHandler;
+    }
+
+    /**
+     * Get billing service — отвечает за списание депозита.
+     *
+     * Пример использования:
+     *   Yii::$app->smlv->billing->charge($accountRef, 1.50, 'Bill #42');
+     *   Yii::$app->smlv->billing->chargeByEmail('user@example.com', 1.50, 'Bill #42');
+     *
+     * @return SmlvBillingService
+     */
+    public function getBillingService(): SmlvBillingService
+    {
+        if ($this->_billingService === null) {
+            $this->_billingService = new SmlvBillingService(
+                $this->getClient(),
+                $this->getBalanceChecker()
+            );
+        }
+
+        return $this->_billingService;
+    }
+
+    /**
+     * Alias for getBillingService() — позволяет использовать ->billing вместо ->billingService.
+     *
+     * @return SmlvBillingService
+     */
+    public function getBilling(): SmlvBillingService
+    {
+        return $this->getBillingService();
     }
 
     /**
