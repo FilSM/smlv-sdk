@@ -43,10 +43,57 @@ class SmlvChargeBehavior extends Behavior
     public function events(): array
     {
         return [
-            ActiveRecord::EVENT_AFTER_INSERT => 'charge',
+            ActiveRecord::EVENT_BEFORE_INSERT => 'beforeCharge',
+            ActiveRecord::EVENT_AFTER_INSERT  => 'charge',
         ];
     }
 
+    /**
+     * Pre-check: resolve account by email and verify sufficient balance.
+     * Cancels the insert (sets $event->isValid = false) if balance is insufficient.
+     * Silent skip conditions (same as charge()): no smlv component, empty email, zero amount.
+     */
+    public function beforeCharge(\yii\base\ModelEvent $event): void
+    {
+        if (!Yii::$app->has('smlv')) {
+            return;
+        }
+
+        $email = $this->resolve($this->email);
+        if (empty($email)) {
+            return;
+        }
+
+        $amount = $this->resolve($this->amount);
+        if ($amount === null || (float) $amount <= 0) {
+            return;
+        }
+
+        try {
+            $accountRef = Yii::$app->smlv->billing->resolveAccountByEmail($email);
+            $sufficient = $accountRef !== null
+                && Yii::$app->smlv->billing->hasBalance($accountRef, (float) $amount);
+
+            if (!$sufficient) {
+                $event->isValid = false;
+                $this->owner->addError(
+                    'smlv',
+                    Yii::t('smlv', 'Insufficient SMLV balance to complete this action.')
+                );
+            }
+        } catch (\Throwable $e) {
+            // API unavailable — log but do not block (avoid halting all activity on SMLV downtime)
+            Yii::error(
+                'SmlvChargeBehavior: balance pre-check failed for ' . get_class($this->owner)
+                    . ' email=' . $email . ': ' . $e->getMessage(),
+                'smlv'
+            );
+        }
+    }
+
+    /**
+     * Post-action: perform the actual debit transaction after successful insert.
+     */
     public function charge(): void
     {
         if (!Yii::$app->has('smlv')) {
@@ -77,7 +124,7 @@ class SmlvChargeBehavior extends Behavior
             $model = $this->owner;
             Yii::error(
                 'SmlvChargeBehavior: failed to charge ' . get_class($model) . ' #' . ($model->id ?? '?')
-                . ' email=' . $email . ' amount=' . $amount . ': ' . $e->getMessage(),
+                    . ' email=' . $email . ' amount=' . $amount . ': ' . $e->getMessage(),
                 'smlv'
             );
         }
