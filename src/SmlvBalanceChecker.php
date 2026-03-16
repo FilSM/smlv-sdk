@@ -118,11 +118,11 @@ class SmlvBalanceChecker
 
         // Create debit transaction
         $result = $this->client->createTransaction($accountReference, [
-            'type'        => 'debit',
-            'amount'      => $amount,
-            'currency'    => $this->currency,
-            'description' => $description,
-            'metadata'    => $metadata,
+            'type'          => 'debit',
+            'amount'        => $amount,
+            'currency_code' => $this->currency,
+            'description'   => $description,
+            'metadata'      => $metadata,
         ]);
 
         // Clear cache after transaction
@@ -148,11 +148,11 @@ class SmlvBalanceChecker
         array $metadata = []
     ): bool {
         $result = $this->client->createTransaction($accountReference, [
-            'type'        => 'credit',
-            'amount'      => $amount,
-            'currency'    => $this->currency,
-            'description' => $description,
-            'metadata'    => $metadata,
+            'type'          => 'credit',
+            'amount'        => $amount,
+            'currency_code' => $this->currency,
+            'description'   => $description,
+            'metadata'      => $metadata,
         ]);
 
         // Clear cache after transaction
