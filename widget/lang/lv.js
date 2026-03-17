@@ -59,6 +59,7 @@ window.SmlvWidgetI18n['lv'] = {
 	txType_refund: 'Atgriešana',
 	txType_bonus: 'Bonuss',
 	txType_adjustment: 'Korekcija',
+	txType_service_fee: 'Pakalpojuma maksa',
 	txSt_pending: 'Gaida',
 	txSt_completed: 'Pabeigts',
 	txSt_failed: 'Kļūda',

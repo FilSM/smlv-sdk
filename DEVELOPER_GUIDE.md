@@ -533,12 +533,12 @@ class Order extends \yii\db\ActiveRecord
 
 ### All options
 
-| Property      | Type                    | Required | Description                                               |
-|---------------|-------------------------|----------|-----------------------------------------------------------|
-| `email`       | `callable\|string`      | Yes      | Email of the SMLV account to charge                       |
-| `amount`      | `callable\|float`       | Yes      | Amount to deduct; `null` / `<= 0` skips the charge       |
-| `description` | `callable\|string`      | No       | Text shown in SMLV transaction history                    |
-| `metadata`    | `callable\|array`       | No       | Arbitrary key-value stored alongside the transaction      |
+| Property      | Type               | Required | Description                                          |
+| ------------- | ------------------ | -------- | ---------------------------------------------------- |
+| `email`       | `callable\|string` | Yes      | Email of the SMLV account to charge                  |
+| `amount`      | `callable\|float`  | Yes      | Amount to deduct; `null` / `<= 0` skips the charge   |
+| `description` | `callable\|string` | No       | Text shown in SMLV transaction history               |
+| `metadata`    | `callable\|array`  | No       | Arbitrary key-value stored alongside the transaction |
 
 ### Full example — SaaS Order model
 
@@ -580,7 +580,7 @@ class Order extends \yii\db\ActiveRecord
 
 The behavior will silently do nothing if:
 
-- `Yii::$app->has('smlv')` returns `false` *(CLI, test, dev without config)*
+- `Yii::$app->has('smlv')` returns `false` _(CLI, test, dev without config)_
 - `email` resolves to `null` or empty string
 - `amount` resolves to `null`, `0`, or negative
 

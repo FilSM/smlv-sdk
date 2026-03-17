@@ -1,7 +1,7 @@
 ﻿/*!
  * SMLV Widget v2.0.0
  * https://cdn.smlv.com/v2/smlv-widget.js
- * (c) SMLV Platform — MIT License
+ * (c) SMLV Platform � MIT License
  *
  * No iframe. Renders directly into the host page DOM.
  * Communicates with the SMLV Widget API using a short-lived JWT token.
@@ -23,7 +23,7 @@
 	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
 	var _widgetLang = 'en';
 
-	// ─── CSS (injected once into <head>) ────────────────────────────────────────
+	// --- CSS (injected once into <head>) ----------------------------------------
 
 	var CSS = [
 		/* Scope: every element touched by the widget lives inside [data-smlv] */
@@ -125,7 +125,7 @@
 		'.smlv-confirm .smlv-form-actions{margin-top:0;padding-top:0;border-top:none;}',
 	].join('');
 
-	// ─── i18n ───────────────────────────────────────────────────────────────────
+	// --- i18n -------------------------------------------------------------------
 
 	function mkT(lang) {
 		var i18n = window.SmlvWidgetI18n || {};
@@ -146,7 +146,7 @@
 		};
 	}
 
-	// ─── Lightweight fetch-based API client ─────────────────────────────────────
+	// --- Lightweight fetch-based API client -------------------------------------
 
 	function SmlvApi(apiUrl, token, xdebug, lang) {
 		this.base = (apiUrl || DEFAULT_API_URL).replace(/\/$/, '');
@@ -225,7 +225,7 @@
 		return this._req('DELETE', path);
 	};
 
-	// ─── DOM helpers ────────────────────────────────────────────────────────────
+	// --- DOM helpers ------------------------------------------------------------
 
 	/**
 	 * Tiny element factory:  h('div', {className:'foo', onClick: fn}, [...children])
@@ -391,7 +391,7 @@
 		if (isNaN(n)) return '0.00000000';
 		return Math.abs(n).toFixed(8);
 	}
-	// ─── Account resolution ─────────────────────────────────────────────────────
+	// --- Account resolution -----------------------------------------------------
 	//
 	// Calls POST /v1/widget/account/resolve.
 	// Server decodes JWT, finds account by external_user_id (or account_reference).
@@ -404,7 +404,7 @@
 		return api.post('/account/resolve', {});
 	}
 
-	// ─── Create-account form ─────────────────────────────────────────────────────
+	// --- Create-account form -----------------------------------------------------
 
 	function renderCreateForm(card, api, prefill, cb, onCreated, lang) {
 		var t = mkT(lang);
@@ -495,7 +495,7 @@
 		card.appendChild(submitBtn);
 	}
 
-	// ─── Tab helper ──────────────────────────────────────────────────────────────
+	// --- Tab helper --------------------------------------------------------------
 
 	function mkTabs(labels, panels) {
 		var tabEls = [];
@@ -539,7 +539,7 @@
 		return { tabBar: tabBar, panels: panelEls };
 	}
 
-	// ─── Widget header ───────────────────────────────────────────────────────────
+	// --- Widget header -----------------------------------------------------------
 
 	function mkHeader(title, rightEl) {
 		return h('div', { className: 'smlv-hdr' }, [
@@ -548,11 +548,11 @@
 		]);
 	}
 
-	// ─── Renderers (one per widget type) ────────────────────────────────────────
+	// --- Renderers (one per widget type) ----------------------------------------
 
 	var Renderers = {
 		/**
-		 * Deposit: currency picker → get wallet address → copy address
+		 * Deposit: currency picker > get wallet address > copy address
 		 */
 		deposit: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
@@ -746,7 +746,7 @@
 		},
 
 		/**
-		 * Balance: grid of currency → amount cards. Refresh = POST /balance/sync.
+		 * Balance: grid of currency > amount cards. Refresh = POST /balance/sync.
 		 */
 		balance: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
@@ -932,7 +932,13 @@
 							items.map(function (tx) {
 								return h('tr', {}, [
 									h('td', {}, fmtDate(tx.created_at)),
-									h('td', {}, tx.type || '—'),
+									h(
+										'td',
+										{},
+										t('txType_' + tx.type) ||
+											tx.type ||
+											'-',
+									),
 									h('td', {}, amtEl(tx.amount)),
 									h(
 										'td',
@@ -1042,7 +1048,7 @@
 		},
 
 		/**
-		 * Management: full CRUD — Overview | Edit | Danger Zone
+		 * Management: full CRUD � Overview | Edit | Danger Zone
 		 */
 		management: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
@@ -1079,7 +1085,7 @@
 					card.appendChild(p);
 				});
 
-				// ── Tab 1: Overview ─────────────────────────────────────────
+				// -- Tab 1: Overview -----------------------------------------
 				function renderOverviewPanel(panel) {
 					var infoRows = [
 						[
@@ -1118,7 +1124,7 @@
 						});
 				}
 
-				// ── Tab 2: Edit ─────────────────────────────────────────────
+				// -- Tab 2: Edit ---------------------------------------------
 				function renderEditPanel(panel) {
 					var firstEl = h('input', {
 						className: 'smlv-input',
@@ -1200,12 +1206,12 @@
 					panel.appendChild(saveBtn);
 				}
 
-				// ── Tab 3: Danger Zone ───────────────────────────────────────
+				// -- Tab 3: Danger Zone ---------------------------------------
 				function renderDangerPanel(panel) {
 					var isActive =
 						acc.status === 'active' || acc.status === 'Active';
 
-					/* ── Close / Reactivate ── */
+					/* -- Close / Reactivate -- */
 					var closeSection = h('div', { className: 'smlv-danger' });
 					closeSection.appendChild(
 						h(
@@ -1315,7 +1321,7 @@
 					panel.appendChild(closeSection);
 					panel.appendChild(h('div', { style: 'height:16px' }));
 
-					/* ── Delete ── */
+					/* -- Delete -- */
 					var delSection = h('div', { className: 'smlv-danger' });
 					delSection.appendChild(
 						h(
@@ -1422,9 +1428,9 @@
 		 * Account (unified): "Create SMLV Account" button when no SMLV account exists,
 		 * or a 4-tab dashboard (SMLV Balance | Transactions | Overview | Danger Zone)
 		 * when the account exists.
-		 * Handles resolveAccount() internally вЂ” skips mount()'s auto-resolve flow.
+		 * Handles resolveAccount() internally — skips mount()'s auto-resolve flow.
 		 *
-		 * cfg.prefill / cfg.syncData  вЂ” subscriber data pre-passed by eGram.
+		 * cfg.prefill / cfg.syncData  — subscriber data pre-passed by eGram.
 		 * The "Create" button auto-creates using prefill (no form) when email+first_name
 		 * are available; falls back to the create form otherwise.
 		 * The "Update" button on the Overview tab pushes prefill/syncData to SMLV
@@ -1437,7 +1443,7 @@
 			card.innerHTML = '';
 			card.appendChild(spinner());
 
-			/* ── Merchant owner: bypass account resolution, show wallet balances ── */
+			/* -- Merchant owner: bypass account resolution, show wallet balances -- */
 			if (cfg.isMerchantOwner) {
 				var moSpin = card.querySelector('.smlv-spin-wrap');
 				if (moSpin) moSpin.remove();
@@ -1469,13 +1475,13 @@
 					cb.onError && cb.onError(e);
 				});
 
-			/* в”Ђв”Ђ No SMLV account: single "Create" button в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */
-			/* ── Merchant owner: wallet balance panel (no CrgAccount) ─────────── */
+			/* ── No SMLV account: single "Create" button ─────────────────────── */
+			/* -- Merchant owner: wallet balance panel (no CrgAccount) ----------- */
 			function renderMerchantOwnerPanel() {
 				card.innerHTML = '';
 				card.appendChild(mkHeader(t('balance') || t('smlvBalance')));
 
-				/* ── Tabs: Balance | Transactions ── */
+				/* -- Tabs: Balance | Transactions -- */
 				var tabs = mkTabs(
 					[t('balance') || t('smlvBalance'), t('transactions')],
 					[renderMoBalancePanel, renderMoTxPanel],
@@ -1485,7 +1491,7 @@
 					card.appendChild(p);
 				});
 
-				/* ── Tab 1: Balance ── */
+				/* -- Tab 1: Balance -- */
 				function renderMoBalancePanel(panel) {
 					/* toolbar buttons */
 					var syncBtn = h(
@@ -1776,7 +1782,7 @@
 						});
 				} /* end renderMoBalancePanel */
 
-				/* ── Tab 2: Transactions ── */
+				/* -- Tab 2: Transactions -- */
 				function renderMoTxPanel(panel) {
 					var txPage = 1;
 					var txSort = 'created_at';
@@ -1840,6 +1846,7 @@
 						['refund', t('txType_refund')],
 						['bonus', t('txType_bonus')],
 						['adjustment', t('txType_adjustment')],
+						['service_fee', t('txType_service_fee')],
 					].forEach(function (o) {
 						var e = document.createElement('option');
 						e.value = o[0];
@@ -2180,7 +2187,7 @@
 				});
 			}
 
-			/* в”Ђв”Ђ Has SMLV account: 4-tab dashboard в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ */
+			/* ── Has SMLV account: 4-tab dashboard ────────────────────────────── */
 			function renderTabs(acc) {
 				card.innerHTML = '';
 				card.appendChild(mkHeader(t('smlvBalance')));
@@ -2204,7 +2211,7 @@
 					card.appendChild(p);
 				});
 
-				/* в”Ђ Tab 1: SMLV Balance в”Ђ */
+				/* ─ Tab 1: SMLV Balance ─ */
 				function renderBalancePanel(panel) {
 					var syncBtn = h(
 						'button',
@@ -2550,7 +2557,7 @@
 						});
 				}
 
-				/* в”Ђ Tab 2: Transactions в”Ђ */
+				/* ─ Tab 2: Transactions ─ */
 				function renderTxPanel(panel) {
 					var txPage = 1;
 					var txSort = 'created_at';
@@ -2615,6 +2622,7 @@
 						['refund', t('txType_refund')],
 						['bonus', t('txType_bonus')],
 						['adjustment', t('txType_adjustment')],
+						['service_fee', t('txType_service_fee')],
 					].forEach(function (o) {
 						var e = document.createElement('option');
 						e.value = o[0];
@@ -2927,7 +2935,7 @@
 					loadTx();
 				}
 
-				/* в”Ђ Tab 3: Overview + push-update button в”Ђ */
+				/* ─ Tab 3: Overview + push-update button ─ */
 				function renderOverviewPanel(panel) {
 					[
 						[
@@ -2964,7 +2972,7 @@
 							);
 						});
 
-					// "Update" button вЂ” pushes eGram subscriber data to SMLV without any form
+					// "Update" button — pushes eGram subscriber data to SMLV without any form
 					var pushData = cfg.prefill || cfg.syncData || {};
 					if (Object.keys(pushData).length) {
 						var msgBox = h('div', {});
@@ -3008,7 +3016,7 @@
 					}
 				}
 
-				/* в”Ђ Tab 4: Danger Zone в”Ђ */
+				/* ─ Tab 4: Danger Zone ─ */
 				function renderDangerPanel(panel) {
 					var isActive =
 						acc.status === 'active' || acc.status === 'Active';
@@ -3218,7 +3226,7 @@
 	};
 	Renderers.account.skipResolve = true;
 
-	// ─── Widget instance ─────────────────────────────────────────────────────────
+	// --- Widget instance ---------------------------------------------------------
 
 	function WidgetInstance(config) {
 		this.config = config;
@@ -3279,11 +3287,11 @@
 			return this;
 		}
 
-		// ── Step 1: Resolve / auto-create account ────────────────────────────
+		// -- Step 1: Resolve / auto-create account ----------------------------
 		// POST /v1/widget/account/resolve
 		// Server decodes JWT:
-		//   • If JWT has account_reference → skip creation, return account
-		//   • If JWT has external_user_id  → find or signal needs_setup
+		//   � If JWT has account_reference > skip creation, return account
+		//   � If JWT has external_user_id  > find or signal needs_setup
 		//   Response variants:
 		//     { success:true, data:{ account:{...} } }
 		//     { success:false, code:'ACCOUNT_NOT_FOUND',
@@ -3295,7 +3303,7 @@
 			.then(function (res) {
 				var s = card.querySelector('.smlv-spin-wrap');
 				if (s) s.remove();
-				// Account found — proceed to requested renderer
+				// Account found � proceed to requested renderer
 				renderer(el, api, cfg, cb);
 			})
 			.catch(function (e) {
@@ -3303,7 +3311,7 @@
 				if (s) s.remove();
 
 				if (e.code === 404) {
-					// Account doesn't exist — show create-account form
+					// Account doesn't exist � show create-account form
 					// Pre-fill data can come from JWT (forwarded via cfg.prefill) or API response
 					var prefill = cfg.prefill || {};
 					renderCreateForm(
@@ -3312,7 +3320,7 @@
 						prefill,
 						cb,
 						function (/*account*/) {
-							// After creation — render the originally requested widget
+							// After creation � render the originally requested widget
 							card.innerHTML = '';
 							renderer(el, api, cfg, cb);
 						},
@@ -3337,7 +3345,7 @@
 		return this;
 	};
 
-	// ─── CSS injection ───────────────────────────────────────────────────────────
+	// --- CSS injection -----------------------------------------------------------
 
 	function injectStyles() {
 		if (document.getElementById(STYLE_ID)) return;
@@ -3347,7 +3355,7 @@
 		document.head.appendChild(style);
 	}
 
-	// ─── Public API ──────────────────────────────────────────────────────────────
+	// --- Public API --------------------------------------------------------------
 
 	var instances = [];
 
@@ -3415,7 +3423,7 @@
 		},
 	};
 
-	// ─── Async queue ─────────────────────────────────────────────────────────────
+	// --- Async queue -------------------------------------------------------------
 	//
 	// Developers can queue configs before the script loads:
 	//   window._smlvQueue = window._smlvQueue || [];
@@ -3443,7 +3451,7 @@
 			}),
 		);
 	} catch (e) {
-		/* IE11 fallback — ignore */
+		/* IE11 fallback � ignore */
 	}
 
 	return SmlvWidget;

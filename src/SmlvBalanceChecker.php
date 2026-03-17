@@ -116,13 +116,16 @@ class SmlvBalanceChecker
             return false;
         }
 
-        // Create debit transaction
+        // Create debit transaction.
+        // 'type' drives the API endpoint (/v1/balance/{ref}/debit), keep it as 'debit'.
+        // 'transaction_type' is passed in the body so SMLVCoin records the correct sub-type.
         $result = $this->client->createTransaction($accountReference, [
-            'type'          => 'debit',
-            'amount'        => $amount,
-            'currency_code' => $this->currency,
-            'description'   => $description,
-            'metadata'      => $metadata,
+            'type'             => 'debit',
+            'transaction_type' => 'service_fee',
+            'amount'           => $amount,
+            'currency_code'    => $this->currency,
+            'description'      => $description,
+            'metadata'         => $metadata,
         ]);
 
         // Clear cache after transaction

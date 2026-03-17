@@ -82,11 +82,17 @@ class SmlvChargeBehavior extends Behavior
                 );
             }
         } catch (\Throwable $e) {
-            // API unavailable — log but do not block (avoid halting all activity on SMLV downtime)
+            // API error — block the insert and report the error to the user.
+            // We must not allow creating paid content when balance cannot be verified.
             Yii::error(
                 'SmlvChargeBehavior: balance pre-check failed for ' . get_class($this->owner)
                     . ' email=' . $email . ': ' . $e->getMessage(),
                 'smlv'
+            );
+            $event->isValid = false;
+            $this->owner->addError(
+                'smlv',
+                Yii::t('smlv', 'Unable to verify SMLV balance. Please check your account and try again.')
             );
         }
     }

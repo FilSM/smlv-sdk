@@ -264,12 +264,12 @@ class Order extends ActiveRecord
 
 **Behavior contract:**
 
-| Condition | Result |
-|---|---|
-| `smlv` component absent from app config | Silently skipped — safe in CLI / test environments |
-| `email` resolves to empty string / null | Silently skipped |
-| `amount` resolves to null, 0 or negative | Silently skipped |
-| API call throws | Logged to `smlv` channel, **save is NOT rolled back** |
+| Condition                                | Result                                                |
+| ---------------------------------------- | ----------------------------------------------------- |
+| `smlv` component absent from app config  | Silently skipped — safe in CLI / test environments    |
+| `email` resolves to empty string / null  | Silently skipped                                      |
+| `amount` resolves to null, 0 or negative | Silently skipped                                      |
+| API call throws                          | Logged to `smlv` channel, **save is NOT rolled back** |
 
 > **Note:** The behavior fires on `EVENT_AFTER_INSERT` only — edits to existing records do not trigger a charge.
 

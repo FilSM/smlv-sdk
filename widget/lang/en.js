@@ -59,6 +59,7 @@ window.SmlvWidgetI18n['en'] = {
 	txType_refund: 'Refund',
 	txType_bonus: 'Bonus',
 	txType_adjustment: 'Adjustment',
+	txType_service_fee: 'Service fee',
 	txSt_pending: 'Pending',
 	txSt_completed: 'Completed',
 	txSt_failed: 'Failed',
