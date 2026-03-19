@@ -191,6 +191,35 @@ class SmlvClient
     }
 
     /**
+     * Get the current exchange rate for a currency pair from the SMLV API.
+     *
+     * Example: getExchangeRate('SMLV', 'EUR') returns 0.082 meaning 1 SMLV = 0.082 EUR.
+     * To convert EUR price to SMLV: smlv_amount = eur_price / rate.
+     *
+     * @param string $from  Source currency code (e.g. 'SMLV')
+     * @param string $to    Target currency code (e.g. 'EUR')
+     * @return float|null   Exchange rate, or null if unavailable
+     * @throws SmlvApiException  On critical API errors (not on 404 / unavailable)
+     */
+    public function getExchangeRate(string $from, string $to): ?float
+    {
+        try {
+            $url      = '/v1/exchange-rate?from=' . urlencode(strtoupper($from))
+                . '&to=' . urlencode(strtoupper($to));
+            $response = $this->request('GET', $url);
+            if (($response['success'] ?? false) && isset($response['data']['rate'])) {
+                return (float) $response['data']['rate'];
+            }
+            return null;
+        } catch (SmlvApiException $e) {
+            if ($e->getCode() === 404) {
+                return null;
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Generate short-lived JWT token for widget authentication.
      *
      * The widget uses this token to call POST /v1/widget/account/resolve,
