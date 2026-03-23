@@ -261,7 +261,7 @@
 	function spinner() {
 		return h('div', { className: 'smlv-spin-wrap' }, [
 			h('div', { className: 'smlv-spinner' }),
-			'Loading�',
+			'Loading...',
 		]);
 	}
 
@@ -299,7 +299,7 @@
 		try {
 			return new Date(iso).toLocaleString(_widgetLang);
 		} catch (e) {
-			return iso || '�';
+			return iso || '—';
 		}
 	}
 
@@ -396,8 +396,8 @@
 	// Calls POST /v1/widget/account/resolve.
 	// Server decodes JWT, finds account by external_user_id (or account_reference).
 	// Returns:
-	//   { success:true, data:{ account:{...} } }             � account found/created
-	//   { success:false, code:'ACCOUNT_NOT_FOUND',           � needs setup form
+	//   { success:true, data:{ account:{...} } }             — account found/created
+	//   { success:false, code:'ACCOUNT_NOT_FOUND',           — needs setup form
 	//     prefill:{ email, first_name, last_name, account_type } }
 
 	function resolveAccount(api) {
@@ -1767,9 +1767,9 @@
 		 * Account (unified): "Create SMLV Account" button when no SMLV account exists,
 		 * or a 4-tab dashboard (SMLV Balance | Transactions | Overview | Danger Zone)
 		 * when the account exists.
-		 * Handles resolveAccount() internally � skips mount()'s auto-resolve flow.
+		 * Handles resolveAccount() internally — skips mount()'s auto-resolve flow.
 		 *
-		 * cfg.prefill / cfg.syncData  � subscriber data pre-passed by eGram.
+		 * cfg.prefill / cfg.syncData  — subscriber data pre-passed by eGram.
 		 * The "Create" button auto-creates using prefill (no form) when email+first_name
 		 * are available; falls back to the create form otherwise.
 		 * The "Update" button on the Overview tab pushes prefill/syncData to SMLV
@@ -2062,7 +2062,7 @@
 								h(
 									'div',
 									{ className: 'smlv-bal-amt' },
-									b.amount != null ? fmtBal(b.amount) : '�',
+									b.amount != null ? fmtBal(b.amount) : '—',
 								),
 							];
 							if (
@@ -3455,7 +3455,7 @@
 							);
 						});
 
-					// "Update" button � pushes eGram subscriber data to SMLV without any form
+					// "Update" button — pushes eGram subscriber data to SMLV without any form
 					var pushData = cfg.prefill || cfg.syncData || {};
 					if (Object.keys(pushData).length) {
 						var msgBox = h('div', {});
@@ -3872,10 +3872,10 @@
 		 * @param {string}         [config.prefill.last_name]
 		 * @param {string}         [config.prefill.account_type]  'natural'|'legal'
 		 * @param {Function}       [config.onReady]    Widget rendered successfully
-		 * @param {Function}       [config.onSuccess]  Action completed � receives { event, ... }
+		 * @param {Function}       [config.onSuccess]  Action completed — receives { event, ... }
 		 *   Events: 'account_created' | 'account_updated' | 'account_closed' |
 		 *           'account_reactivated' | 'account_deleted' | (deposit confirmation)
-		 * @param {Function}       [config.onError]    Error � receives Error object
+		 * @param {Function}       [config.onError]    Error — receives Error object
 		 * @param {Function}       [config.onClose]    Widget dismissed by user
 		 * @returns {WidgetInstance}
 		 */
