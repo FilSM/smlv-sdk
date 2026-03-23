@@ -1,4 +1,4 @@
-/*!
+ï»¿/*!
  * SMLV Widget v2.0.0
  * https://cdn.smlv.com/v2/smlv-widget.js
  * (c) SMLV Platform ? MIT License
@@ -261,7 +261,7 @@
 	function spinner() {
 		return h('div', { className: 'smlv-spin-wrap' }, [
 			h('div', { className: 'smlv-spinner' }),
-			'Loading…',
+			'Loadingï¿½',
 		]);
 	}
 
@@ -299,7 +299,7 @@
 		try {
 			return new Date(iso).toLocaleString(_widgetLang);
 		} catch (e) {
-			return iso || '—';
+			return iso || 'ï¿½';
 		}
 	}
 
@@ -396,8 +396,8 @@
 	// Calls POST /v1/widget/account/resolve.
 	// Server decodes JWT, finds account by external_user_id (or account_reference).
 	// Returns:
-	//   { success:true, data:{ account:{...} } }             — account found/created
-	//   { success:false, code:'ACCOUNT_NOT_FOUND',           — needs setup form
+	//   { success:true, data:{ account:{...} } }             ï¿½ account found/created
+	//   { success:false, code:'ACCOUNT_NOT_FOUND',           ï¿½ needs setup form
 	//     prefill:{ email, first_name, last_name, account_type } }
 
 	function resolveAccount(api) {
@@ -1223,6 +1223,7 @@
 								h('th', {}, t('colFee')),
 								h('th', {}, t('colCurrency')),
 								h('th', {}, t('colStatus')),
+								h('th', {}, t('colInvoice')),
 							]),
 						]);
 
@@ -1230,6 +1231,43 @@
 							'tbody',
 							{},
 							items.map(function (tx) {
+								var stPrintTd;
+								if (tx.direction === 'credit' && tx.reference) {
+									var stBtn = h(
+										'button',
+										{
+											className: 'smlv-btn smlv-btn-sm',
+											style: 'white-space:nowrap',
+										},
+										t('printInvoice'),
+									);
+									stBtn.addEventListener(
+										'click',
+										(function (ref) {
+											return function () {
+												window.open(
+													api.base +
+														'/v1/widget/transaction/' +
+														encodeURIComponent(
+															ref,
+														) +
+														'/invoice?widget_token=' +
+														encodeURIComponent(
+															api.token,
+														),
+													'_blank',
+												);
+											};
+										})(tx.reference),
+									);
+									stPrintTd = h('td', {}, stBtn);
+								} else {
+									stPrintTd = h(
+										'td',
+										{ style: 'color:var(--smlv-muted)' },
+										'â€”',
+									);
+								}
 								return h('tr', {}, [
 									h('td', {}, fmtDate(tx.created_at)),
 									h(
@@ -1245,7 +1283,7 @@
 										{ style: 'color:var(--smlv-muted)' },
 										tx.fee != null && tx.fee > 0
 											? fmtBal(tx.fee)
-											: '—',
+											: 'â€”',
 									),
 									h(
 										'td',
@@ -1253,10 +1291,10 @@
 										(tx.currency || '').toUpperCase(),
 									),
 									h('td', {}, badge(tx.status)),
+									stPrintTd,
 								]);
 							}),
 						);
-
 						var stTotalAmt = items.reduce(function (s, tx) {
 							return s + (tx.amount || 0);
 						}, 0);
@@ -1284,8 +1322,9 @@
 										{ style: 'color:var(--smlv-muted);' },
 										stTotalFee > 0
 											? fmtBal(stTotalFee)
-											: '—',
+											: 'â€”',
 									),
+									h('td'),
 									h('td'),
 									h('td'),
 								],
@@ -1728,9 +1767,9 @@
 		 * Account (unified): "Create SMLV Account" button when no SMLV account exists,
 		 * or a 4-tab dashboard (SMLV Balance | Transactions | Overview | Danger Zone)
 		 * when the account exists.
-		 * Handles resolveAccount() internally — skips mount()'s auto-resolve flow.
+		 * Handles resolveAccount() internally ï¿½ skips mount()'s auto-resolve flow.
 		 *
-		 * cfg.prefill / cfg.syncData  — subscriber data pre-passed by eGram.
+		 * cfg.prefill / cfg.syncData  ï¿½ subscriber data pre-passed by eGram.
 		 * The "Create" button auto-creates using prefill (no form) when email+first_name
 		 * are available; falls back to the create form otherwise.
 		 * The "Update" button on the Overview tab pushes prefill/syncData to SMLV
@@ -2023,7 +2062,7 @@
 								h(
 									'div',
 									{ className: 'smlv-bal-amt' },
-									b.amount != null ? fmtBal(b.amount) : '—',
+									b.amount != null ? fmtBal(b.amount) : 'ï¿½',
 								),
 							];
 							if (
@@ -2101,8 +2140,34 @@
 						{ key: 'fee', label: t('colFee') },
 						{ key: 'currency', label: t('colCurrency') },
 						{ key: 'status', label: t('colStatus') },
+						{ key: '', label: t('colInvoice') },
 					];
 
+					var stmtBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-sm',
+							style: 'white-space:nowrap',
+						},
+						t('printStatement'),
+					);
+					stmtBtn.addEventListener('click', function () {
+						var url =
+							api.base +
+							'/v1/widget/transactions/statement?widget_token=' +
+							encodeURIComponent(api.token);
+						if (txDateFrom)
+							url +=
+								'&date_from=' + encodeURIComponent(txDateFrom);
+						if (txDateTo)
+							url += '&date_to=' + encodeURIComponent(txDateTo);
+						if (txCurrency)
+							url +=
+								'&currency=' + encodeURIComponent(txCurrency);
+						if (txType)
+							url += '&type=' + encodeURIComponent(txType);
+						window.open(url, '_blank');
+					});
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
 					var selCurrency = document.createElement('select');
@@ -2219,6 +2284,7 @@
 							h('label', {}, [t('filterDateFrom'), inpFrom]),
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
+							stmtBtn,
 						]),
 					);
 					var listEl = document.createElement('div');
@@ -2319,6 +2385,49 @@
 									'tbody',
 									{},
 									items.map(function (tx) {
+										var moPrintTd;
+										if (
+											tx.direction === 'credit' &&
+											tx.reference
+										) {
+											var moBtn = h(
+												'button',
+												{
+													className:
+														'smlv-btn smlv-btn-sm',
+													style: 'white-space:nowrap',
+												},
+												t('printInvoice'),
+											);
+											moBtn.addEventListener(
+												'click',
+												(function (ref) {
+													return function () {
+														window.open(
+															api.base +
+																'/v1/widget/transaction/' +
+																encodeURIComponent(
+																	ref,
+																) +
+																'/invoice?widget_token=' +
+																encodeURIComponent(
+																	api.token,
+																),
+															'_blank',
+														);
+													};
+												})(tx.reference),
+											);
+											moPrintTd = h('td', {}, moBtn);
+										} else {
+											moPrintTd = h(
+												'td',
+												{
+													style: 'color:var(--smlv-muted)',
+												},
+												'â€”',
+											);
+										}
 										return h('tr', {}, [
 											h('td', {}, fmtDate(tx.created_at)),
 											h(
@@ -2361,6 +2470,7 @@
 												).toUpperCase(),
 											),
 											h('td', {}, badge(tx.status)),
+											moPrintTd,
 										]);
 									}),
 								);
@@ -2396,6 +2506,7 @@
 													? fmtBal(moTotalFee)
 													: '\u2014',
 											),
+											h('td'),
 											h('td'),
 											h('td'),
 										],
@@ -2876,9 +2987,35 @@
 						{ key: 'fee', label: t('colFee') },
 						{ key: 'currency', label: t('colCurrency') },
 						{ key: 'status', label: t('colStatus') },
+						{ key: '', label: t('colInvoice') },
 					];
 
 					// Filter bar
+					var stmtBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-sm',
+							style: 'white-space:nowrap',
+						},
+						t('printStatement'),
+					);
+					stmtBtn.addEventListener('click', function () {
+						var url =
+							api.base +
+							'/v1/widget/transactions/statement?widget_token=' +
+							encodeURIComponent(api.token);
+						if (txDateFrom)
+							url +=
+								'&date_from=' + encodeURIComponent(txDateFrom);
+						if (txDateTo)
+							url += '&date_to=' + encodeURIComponent(txDateTo);
+						if (txCurrency)
+							url +=
+								'&currency=' + encodeURIComponent(txCurrency);
+						if (txType)
+							url += '&type=' + encodeURIComponent(txType);
+						window.open(url, '_blank');
+					});
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
 					var selCurrency = document.createElement('select');
@@ -2995,6 +3132,7 @@
 							h('label', {}, [t('filterDateFrom'), inpFrom]),
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
+							stmtBtn,
 						]),
 					);
 					var listEl = document.createElement('div');
@@ -3095,6 +3233,49 @@
 									'tbody',
 									{},
 									items.map(function (tx) {
+										var rtPrintTd;
+										if (
+											tx.direction === 'credit' &&
+											tx.reference
+										) {
+											var rtBtn = h(
+												'button',
+												{
+													className:
+														'smlv-btn smlv-btn-sm',
+													style: 'white-space:nowrap',
+												},
+												t('printInvoice'),
+											);
+											rtBtn.addEventListener(
+												'click',
+												(function (ref) {
+													return function () {
+														window.open(
+															api.base +
+																'/v1/widget/transaction/' +
+																encodeURIComponent(
+																	ref,
+																) +
+																'/invoice?widget_token=' +
+																encodeURIComponent(
+																	api.token,
+																),
+															'_blank',
+														);
+													};
+												})(tx.reference),
+											);
+											rtPrintTd = h('td', {}, rtBtn);
+										} else {
+											rtPrintTd = h(
+												'td',
+												{
+													style: 'color:var(--smlv-muted)',
+												},
+												'â€”',
+											);
+										}
 										return h('tr', {}, [
 											h('td', {}, fmtDate(tx.created_at)),
 											h(
@@ -3137,6 +3318,7 @@
 												).toUpperCase(),
 											),
 											h('td', {}, badge(tx.status)),
+											rtPrintTd,
 										]);
 									}),
 								);
@@ -3172,6 +3354,7 @@
 													? fmtBal(rtTotalFee)
 													: '\u2014',
 											),
+											h('td'),
 											h('td'),
 											h('td'),
 										],
@@ -3272,7 +3455,7 @@
 							);
 						});
 
-					// "Update" button — pushes eGram subscriber data to SMLV without any form
+					// "Update" button ï¿½ pushes eGram subscriber data to SMLV without any form
 					var pushData = cfg.prefill || cfg.syncData || {};
 					if (Object.keys(pushData).length) {
 						var msgBox = h('div', {});
@@ -3689,10 +3872,10 @@
 		 * @param {string}         [config.prefill.last_name]
 		 * @param {string}         [config.prefill.account_type]  'natural'|'legal'
 		 * @param {Function}       [config.onReady]    Widget rendered successfully
-		 * @param {Function}       [config.onSuccess]  Action completed — receives { event, ... }
+		 * @param {Function}       [config.onSuccess]  Action completed ï¿½ receives { event, ... }
 		 *   Events: 'account_created' | 'account_updated' | 'account_closed' |
 		 *           'account_reactivated' | 'account_deleted' | (deposit confirmation)
-		 * @param {Function}       [config.onError]    Error — receives Error object
+		 * @param {Function}       [config.onError]    Error ï¿½ receives Error object
 		 * @param {Function}       [config.onClose]    Widget dismissed by user
 		 * @returns {WidgetInstance}
 		 */
