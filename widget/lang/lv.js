@@ -14,7 +14,7 @@ window.SmlvWidgetI18n['lv'] = {
 	individualShort: 'Fiziska persona',
 	company: 'Juridiska persona',
 	companyShort: 'Juridiska persona',
-	creating: 'Izveido\u2026',
+	creating: 'Izveido...',
 	emailFirstRequired: 'L\u016bdzu ievadiet e-pastu un v\u0101rdu.',
 	deposit: 'Depoz\u012bts',
 	selectCurrency: 'Izv\u0113lieties val\u016btu',
@@ -37,7 +37,7 @@ window.SmlvWidgetI18n['lv'] = {
 		'Jums OBLIG\u0100TI j\u0101nor\u0101da atsauce maks\u0101juma aprakst\u0101.',
 	depositContactSupport:
 		'L\u016bdzu, sazinieties ar atbalstu, lai pabeigtu maks\u0101jumu.',
-	depositWatching: 'Gaida maks\u0101juma apstiprin\u0101jumu\u2026',
+	depositWatching: 'Gaida maks\u0101juma apstiprin\u0101jumu...',
 	depositPollTimeout:
 		'Laika limits beidzies. L\u016bdzu, p\u0101rbaudiet v\u0113l\u0101k.',
 	depositFailed: 'Maks\u0101jums neizdev\u0101s vai tika atcelts.',
@@ -46,12 +46,12 @@ window.SmlvWidgetI18n['lv'] = {
 	depositSuccess: 'Maks\u0101jums sa\u0146emts!',
 	depositSuccessHint:
 		'{amount}\u00a0SMLV dr\u012bz par\u0101d\u012bs\u0113s j\u016bsu bilan\u010d\u0113.',
-	loading: 'Iel\u0101d\u0113\u2026',
+	loading: 'Iel\u0101d\u0113...',
 	copy: 'Kop\u0113t',
 	copied: 'Nokop\u0113ts!',
 	balance: 'Atlikums',
 	sync: 'Atjaunin\u0101t',
-	syncing: 'Atjaunina\u2026',
+	syncing: 'Atjaunina...',
 	noBalance: 'Atlikuma dati v\u0113l nav pieejami.',
 	updatedAt: 'Atjaunin\u0101ts: ',
 	transactions: 'Dar\u012bjumi',
@@ -97,7 +97,7 @@ window.SmlvWidgetI18n['lv'] = {
 	statusField: 'Statuss',
 	createdField: 'Izveidots',
 	saveChanges: 'Saglab\u0101t',
-	saving: 'Saglab\u0101\u2026',
+	saving: 'Saglab\u0101...',
 	accountUpdated: 'Konts veiksm\u012bgi atjaunin\u0101ts.',
 	deactivateTitle: 'Deaktiviz\u0113t kontu',
 	reactivateTitle: 'Aktiviz\u0113t kontu',
@@ -128,7 +128,7 @@ window.SmlvWidgetI18n['lv'] = {
 	bicLabel: 'BIC / SWIFT',
 	beneficiaryLabel: 'Sa\u0146\u0113m\u0113ja nosaukums',
 	withdrawSubmit: 'Iesniegt piepras\u012bjumu',
-	withdrawProcessing: 'Apstr\u0101d\u0101\u2026',
+	withdrawProcessing: 'Apstr\u0101d\u0101...',
 	withdrawSuccess: 'Izmaksas piepras\u012bjums veiksm\u012bgi iesniegts.',
 	// --- Merchant owner panel ---
 	noData: 'Nav pieejami bilances dati.',
@@ -138,6 +138,6 @@ window.SmlvWidgetI18n['lv'] = {
 	smlvBalance: 'SMLV Bilance',
 	createSmlvAccount: 'Izveidot SMLV kontu',
 	pushUpdate: 'Atjaunin\u0101t no SaaS',
-	pushUpdating: 'Atjaunina\u2026',
+	pushUpdating: 'Atjaunina...',
 	profileSynced: 'Profils atjaunin\u0101ts no SaaS datiem.',
 };

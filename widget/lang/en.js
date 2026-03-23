@@ -1,4 +1,4 @@
-/* global SmlvWidgetI18n */
+﻿/* global SmlvWidgetI18n */
 window.SmlvWidgetI18n = window.SmlvWidgetI18n || {};
 window.SmlvWidgetI18n['en'] = {
 	createAccount: 'Create Account',
@@ -14,7 +14,7 @@ window.SmlvWidgetI18n['en'] = {
 	individualShort: 'Individual',
 	company: 'Company (Legal entity)',
 	companyShort: 'Company',
-	creating: 'Creating\u2026',
+	creating: 'Creating...',
 	emailFirstRequired: 'Email and first name are required.',
 	deposit: 'Deposit',
 	selectCurrency: 'Select currency',
@@ -33,21 +33,23 @@ window.SmlvWidgetI18n['en'] = {
 	depositIBAN: 'IBAN',
 	depositBIC: 'BIC / SWIFT',
 	depositReference: 'Payment reference',
-	depositReferenceHint: 'You MUST include the reference in the payment description.',
+	depositReferenceHint:
+		'You MUST include the reference in the payment description.',
 	depositContactSupport: 'Please contact support to complete your payment.',
-	depositWatching: 'Waiting for payment confirmation\u2026',
+	depositWatching: 'Waiting for payment confirmation...',
 	depositPollTimeout: 'Timed out. Please check back later.',
 	depositFailed: 'Payment failed or was cancelled.',
 	depositTryAgain: 'Try Again',
 	depositNewOrder: 'Start new order',
 	depositSuccess: 'Payment received!',
-	depositSuccessHint: '{amount}\u00a0SMLV will appear in your balance shortly.',
-	loading: 'Loading\u2026',
+	depositSuccessHint:
+		'{amount}\u00a0SMLV will appear in your balance shortly.',
+	loading: 'Loading...',
 	copy: 'Copy',
 	copied: 'Copied!',
 	balance: 'Balance',
 	sync: 'Sync',
-	syncing: 'Syncing\u2026',
+	syncing: 'Syncing...',
 	noBalance: 'No balance data yet.',
 	updatedAt: 'Updated: ',
 	transactions: 'Transactions',
@@ -93,7 +95,7 @@ window.SmlvWidgetI18n['en'] = {
 	statusField: 'Status',
 	createdField: 'Created',
 	saveChanges: 'Save changes',
-	saving: 'Saving\u2026',
+	saving: 'Saving...',
 	accountUpdated: 'Account updated successfully.',
 	deactivateTitle: 'Deactivate account',
 	reactivateTitle: 'Reactivate account',
@@ -120,7 +122,7 @@ window.SmlvWidgetI18n['en'] = {
 	bicLabel: 'BIC / SWIFT',
 	beneficiaryLabel: 'Beneficiary name',
 	withdrawSubmit: 'Submit withdrawal',
-	withdrawProcessing: 'Processing\u2026',
+	withdrawProcessing: 'Processing...',
 	withdrawSuccess: 'Withdrawal request submitted successfully.',
 	// ─── Merchant owner panel ───
 	noData: 'No balance data available.',
@@ -131,6 +133,6 @@ window.SmlvWidgetI18n['en'] = {
 	smlvBalance: 'SMLV Balance',
 	createSmlvAccount: 'Create SMLV Account',
 	pushUpdate: 'Update from SaaS',
-	pushUpdating: 'Updating…',
+	pushUpdating: 'Updating...',
 	profileSynced: 'Profile updated from SaaS data.',
 };
