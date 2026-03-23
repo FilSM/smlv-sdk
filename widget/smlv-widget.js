@@ -18,7 +18,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
 
-	var VERSION = '2.0.9';
+	var VERSION = '2.1.0';
 	var STYLE_ID = 'smlv-widget-styles';
 	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
 	var _widgetLang = 'en';
@@ -552,27 +552,32 @@
 
 	var Renderers = {
 		/**
-		 * Deposit: currency picker > get wallet address > copy address
+		 * Deposit: user buys SMLV from the platform.
+		 * Flow: enter amount → rate/fee preview → POST /deposit/buy →
+		 *       show bank transfer instructions → poll /deposit/order/<uuid>
+		 *       → success screen.
 		 */
 		deposit: function (root, api, cfg, cb) {
 			var card = root.querySelector('.smlv-card');
 			var t = mkT(cfg.lang);
-			var selectedCurrency = null;
-			var walletData = null;
+			var depositInfo = null;
+			var order = null;
+			var pollTimer = null;
 
-			function setLoading(el) {
-				el.innerHTML = '';
-				el.appendChild(spinner());
+			function cancelPoll() {
+				if (pollTimer) {
+					clearInterval(pollTimer);
+					pollTimer = null;
+				}
 			}
 
 			function initialLoad() {
-				setLoading(card);
+				card.innerHTML = '';
+				card.appendChild(spinner());
 				api.get('/deposit/info')
 					.then(function (res) {
-						var info = res.data || {};
-						var currencies = info.currencies || [];
-						selectedCurrency = currencies[0] || 'BTC';
-						renderForm(info, currencies);
+						depositInfo = res.data || {};
+						renderForm();
 						cb.onReady && cb.onReady();
 					})
 					.catch(function (e) {
@@ -582,164 +587,459 @@
 					});
 			}
 
-			function renderForm(info, currencies) {
+			function renderForm() {
+				cancelPoll();
 				card.innerHTML = '';
 				card.appendChild(mkHeader(t('deposit')));
 
-				/* Currency selector */
+				var payCurrencies = depositInfo.pay_currencies || [
+					{ code: 'EUR', rate: 1 },
+				];
+				var selectedCur = payCurrencies[0] || { code: 'EUR', rate: 1 };
+				var feePercent = parseFloat(depositInfo.fee_percent) || 0;
+				var feeFixed = parseFloat(depositInfo.fee_fixed) || 0;
+				var minAmount = parseFloat(depositInfo.min_amount) || 0;
+
+				// Amount input
+				var amtInp = document.createElement('input');
+				amtInp.type = 'number';
+				amtInp.min = minAmount > 0 ? minAmount : '0.01';
+				amtInp.step = '0.01';
+				amtInp.className = 'smlv-input';
+				amtInp.placeholder = '0.00';
+
+				// Payment currency selector
 				var sel = h(
 					'select',
 					{ className: 'smlv-select' },
-					currencies.map(function (c) {
-						var o = h('option', { value: c }, c.toUpperCase());
-						if (c === selectedCurrency) o.selected = true;
+					payCurrencies.map(function (c) {
+						var o = h('option', { value: c.code }, c.code);
+						if (c.code === selectedCur.code) o.selected = true;
 						return o;
 					}),
 				);
 				sel.addEventListener('change', function () {
-					selectedCurrency = sel.value;
-					walletData = null;
-					renderWalletSection();
+					selectedCur =
+						payCurrencies.filter(function (c) {
+							return c.code === sel.value;
+						})[0] || payCurrencies[0];
+					updatePreview();
 				});
+
+				// Preview area
+				var previewEl = h('div', { className: 'smlv-deposit-preview' });
+
+				function mkPreviewRow(lbl, val, bold) {
+					return h(
+						'div',
+						{
+							style: 'display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--smlv-border,#eee)',
+						},
+						[
+							h(
+								'span',
+								{ style: 'color:var(--smlv-muted,#666)' },
+								lbl,
+							),
+							bold ? h('b', {}, val) : h('span', {}, val),
+						],
+					);
+				}
+
+				function updatePreview() {
+					var amt = parseFloat(amtInp.value) || 0;
+					previewEl.innerHTML = '';
+					if (amt <= 0) return;
+					var rate = parseFloat(selectedCur.rate) || 1;
+					var amtFiat = Math.round(amt * rate * 100) / 100;
+					var feeAmt =
+						Math.round(
+							((amtFiat * feePercent) / 100 + feeFixed) * 100,
+						) / 100;
+					var totalDue = Math.round((amtFiat + feeAmt) * 100) / 100;
+					previewEl.appendChild(
+						h(
+							'div',
+							{
+								style: 'background:var(--smlv-bg,#f8f9fa);border:1px solid var(--smlv-border,#ddd);border-radius:6px;padding:10px 14px;margin-top:10px',
+							},
+							[
+								mkPreviewRow(
+									t('depositRate'),
+									'1\u00a0SMLV\u00a0=\u00a0' +
+										rate.toFixed(4) +
+										'\u00a0' +
+										selectedCur.code,
+									false,
+								),
+								mkPreviewRow(
+									t('depositFee'),
+									feeAmt.toFixed(2) +
+										'\u00a0' +
+										selectedCur.code +
+										(feePercent > 0
+											? ' (' + feePercent + '%)'
+											: ''),
+									false,
+								),
+								mkPreviewRow(
+									t('depositTotal'),
+									totalDue.toFixed(2) +
+										'\u00a0' +
+										selectedCur.code,
+									true,
+								),
+							],
+						),
+					);
+				}
+
+				amtInp.addEventListener('input', updatePreview);
+
+				var buyBtn = h(
+					'button',
+					{
+						className: 'smlv-btn',
+						style: 'margin-top:16px;width:100%',
+					},
+					t('buyNow'),
+				);
+				buyBtn.addEventListener('click', function () {
+					var amt = parseFloat(amtInp.value) || 0;
+					if (amt <= 0) return;
+					if (minAmount > 0 && amt < minAmount) {
+						var existErr = card.querySelector('.smlv-amt-err');
+						if (existErr) existErr.remove();
+						var errEl = alertBox(
+							'err',
+							t('minDeposit', {
+								amount: minAmount,
+								currency: 'SMLV',
+							}),
+						);
+						errEl.className += ' smlv-amt-err';
+						card.insertBefore(errEl, buyBtn);
+						return;
+					}
+					buyBtn.disabled = true;
+					buyBtn.textContent = t('loading');
+					api.post('/deposit/buy', {
+						amount_smlv: amt,
+						from_currency: selectedCur.code,
+					})
+						.then(function (res) {
+							order = res.data || {};
+							renderOrderWaiting();
+						})
+						.catch(function (e) {
+							var existErr = card.querySelector('.smlv-buy-err');
+							if (existErr) existErr.remove();
+							var errEl = alertBox('err', e.message);
+							errEl.className += ' smlv-buy-err';
+							card.insertBefore(errEl, buyBtn);
+							buyBtn.disabled = false;
+							buyBtn.textContent = t('buyNow');
+						});
+				});
+
 				card.appendChild(
 					h('div', { className: 'smlv-field' }, [
 						h(
 							'label',
 							{ className: 'smlv-label' },
-							t('selectCurrency'),
+							t('depositAmountLabel'),
+						),
+						h(
+							'div',
+							{
+								style: 'display:flex;gap:8px;align-items:center',
+							},
+							[
+								amtInp,
+								h(
+									'span',
+									{
+										style: 'font-weight:700;white-space:nowrap',
+									},
+									'SMLV',
+								),
+							],
+						),
+					]),
+				);
+				card.appendChild(
+					h('div', { className: 'smlv-field' }, [
+						h(
+							'label',
+							{ className: 'smlv-label' },
+							t('depositPayWith'),
 						),
 						sel,
 					]),
 				);
-
-				if (info.min_amount) {
+				card.appendChild(previewEl);
+				if (minAmount > 0) {
 					card.appendChild(
 						alertBox(
 							'info',
 							t('minDeposit', {
-								amount: info.min_amount,
-								currency: selectedCurrency.toUpperCase(),
+								amount: minAmount,
+								currency: 'SMLV',
 							}),
 						),
 					);
 				}
-
-				renderWalletSection();
+				card.appendChild(buyBtn);
 			}
 
-			function renderWalletSection() {
-				var existing = card.querySelector('.smlv-wallet');
-				if (existing) existing.remove();
+			function renderOrderWaiting() {
+				cancelPoll();
+				if (!order) return;
+				card.innerHTML = '';
+				card.appendChild(mkHeader(t('depositAwaiting')));
 
-				var section = h('div', { className: 'smlv-wallet' });
+				var pay = order.payment || {};
 
-				if (!walletData) {
-					var btn = h(
-						'button',
-						{ className: 'smlv-btn' },
-						t('getDepositAddress'),
+				function mkSummRow(lbl, val, bold) {
+					return h(
+						'div',
+						{
+							style: 'display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--smlv-border,#eee)',
+						},
+						[
+							h(
+								'span',
+								{ style: 'color:var(--smlv-muted,#666)' },
+								lbl,
+							),
+							bold ? h('b', {}, val) : h('span', {}, val),
+						],
 					);
-					btn.addEventListener('click', function () {
-						btn.disabled = true;
-						btn.textContent = t('loading');
-						api.get('/deposit/address', {
-							currency: selectedCurrency,
-						})
-							.then(function (r) {
-								walletData = r.data || {};
-								renderWalletSection();
-							})
-							.catch(function (e) {
-								section.appendChild(alertBox('err', e.message));
-								btn.disabled = false;
-								btn.textContent = t('getDepositAddress');
-							});
-					});
-					section.appendChild(btn);
-				} else {
-					section.appendChild(
-						alertBox(
-							'ok',
-							t('sendHint', {
-								currency: selectedCurrency.toUpperCase(),
-							}),
+				}
+
+				// Order summary
+				card.appendChild(
+					h(
+						'div',
+						{
+							style: 'background:var(--smlv-bg,#f8f9fa);border:1px solid var(--smlv-border,#ddd);border-radius:6px;padding:10px 14px;margin:0 0 16px',
+						},
+						[
+							mkSummRow(
+								t('depositYouGet'),
+								(order.amount_smlv || 0) + '\u00a0SMLV',
+								false,
+							),
+							mkSummRow(
+								t('depositRate'),
+								'1\u00a0SMLV\u00a0=\u00a0' +
+									(order.rate || '?') +
+									'\u00a0' +
+									(order.currency || ''),
+								false,
+							),
+							mkSummRow(
+								t('depositFee'),
+								(order.fee_amount || 0) +
+									'\u00a0' +
+									(order.currency || ''),
+								false,
+							),
+							mkSummRow(
+								t('depositTotal'),
+								(order.total_due || 0) +
+									'\u00a0' +
+									(order.currency || ''),
+								true,
+							),
+						],
+					),
+				);
+
+				// Bank transfer instructions
+				if (pay.iban || pay.beneficiary) {
+					card.appendChild(
+						h(
+							'p',
+							{ style: 'font-weight:700;margin:0 0 10px' },
+							t('depositPayInstructions'),
 						),
 					);
 
-					/* Address copy box */
-					var cpyBtn = h(
-						'button',
-						{ className: 'smlv-btn smlv-btn-sm' },
-						t('copy'),
-					);
-					cpyBtn.addEventListener('click', function () {
-						copyToClipboard(
-							walletData.address,
-							cpyBtn,
-							t('copied'),
-						);
-					});
-					section.appendChild(
-						h('div', { className: 'smlv-field' }, [
-							h(
-								'label',
-								{ className: 'smlv-label' },
-								t('walletAddress'),
-							),
-							h('div', { className: 'smlv-copy-box' }, [
-								h('span', {}, walletData.address),
+					function mkInstRow(lbl, val, copyable) {
+						if (!val) return h('span', {});
+						var valueEl;
+						if (copyable) {
+							var cpyBtn = h(
+								'button',
+								{ className: 'smlv-btn smlv-btn-sm' },
+								t('copy'),
+							);
+							cpyBtn.addEventListener('click', function () {
+								copyToClipboard(val, cpyBtn, t('copied'));
+							});
+							valueEl = h('div', { className: 'smlv-copy-box' }, [
+								h('span', {}, val),
 								cpyBtn,
-							]),
-						]),
-					);
-
-					/* Memo / Tag if present */
-					var memo = walletData.memo || walletData.tag;
-					if (memo) {
-						var mBtn = h(
-							'button',
-							{ className: 'smlv-btn smlv-btn-sm' },
-							t('copy'),
-						);
-						mBtn.addEventListener('click', function () {
-							copyToClipboard(memo, mBtn, t('copied'));
-						});
-						section.appendChild(
-							h('div', { className: 'smlv-field' }, [
-								h(
-									'label',
-									{ className: 'smlv-label' },
-									t('memoTag'),
-								),
-								h('div', { className: 'smlv-copy-box' }, [
-									h('span', {}, memo),
-									mBtn,
-								]),
-							]),
-						);
+							]);
+						} else {
+							valueEl = h(
+								'div',
+								{ style: 'font-weight:600' },
+								val,
+							);
+						}
+						return h('div', { style: 'margin:8px 0' }, [
+							h(
+								'div',
+								{
+									style: 'font-size:11px;color:var(--smlv-muted,#888);margin-bottom:2px',
+								},
+								lbl,
+							),
+							valueEl,
+						]);
 					}
 
-					/* Done button */
-					var doneBtn = h(
-						'button',
-						{
-							className: 'smlv-btn',
-							style: 'margin-top:12px',
-						},
-						t('sentPayment'),
+					if (pay.beneficiary)
+						card.appendChild(
+							mkInstRow(
+								t('depositBeneficiary'),
+								pay.beneficiary,
+								false,
+							),
+						);
+					if (pay.bank_name)
+						card.appendChild(
+							mkInstRow(t('depositBank'), pay.bank_name, false),
+						);
+					if (pay.iban)
+						card.appendChild(
+							mkInstRow(t('depositIBAN'), pay.iban, true),
+						);
+					if (pay.bic)
+						card.appendChild(
+							mkInstRow(t('depositBIC'), pay.bic, true),
+						);
+					if (pay.reference)
+						card.appendChild(
+							mkInstRow(
+								t('depositReference'),
+								pay.reference,
+								true,
+							),
+						);
+					card.appendChild(
+						alertBox('info', t('depositReferenceHint')),
 					);
-					doneBtn.addEventListener('click', function () {
-						var payload = {
-							currency: selectedCurrency,
-							address: walletData.address,
-						};
-						cb.onSuccess && cb.onSuccess(payload);
-						if (cfg.returnUrl) window.location.href = cfg.returnUrl;
-					});
-					section.appendChild(doneBtn);
+				} else {
+					card.appendChild(
+						alertBox('info', t('depositContactSupport')),
+					);
 				}
 
-				card.appendChild(section);
+				// Status indicator
+				var statusEl = h(
+					'div',
+					{
+						style: 'text-align:center;padding:12px 0;color:var(--smlv-muted,#666);font-size:13px',
+					},
+					'\u23f3\u00a0' + t('depositWatching'),
+				);
+				card.appendChild(statusEl);
+
+				// Poll status every 5 s
+				var pollCount = 0;
+				function doPoll() {
+					if (++pollCount > 120) {
+						cancelPoll();
+						statusel.textContent = t('depositPollTimeout');
+						return;
+					}
+					api.get('/deposit/order/' + order.order_uuid)
+						.then(function (res) {
+							var d = res.data || {};
+							if (d.status === 'completed') {
+								cancelPoll();
+								renderSuccess(
+									d.amount_smlv || order.amount_smlv,
+								);
+							} else if (
+								d.status === 'failed' ||
+								d.status === 'cancelled'
+							) {
+								cancelPoll();
+								card.innerHTML = '';
+								card.appendChild(mkHeader(t('deposit')));
+								card.appendChild(
+									alertBox('err', t('depositFailed')),
+								);
+								var retryBtn = h(
+									'button',
+									{
+										className: 'smlv-btn',
+										style: 'margin-top:16px;width:100%',
+									},
+									t('depositTryAgain'),
+								);
+								retryBtn.addEventListener('click', function () {
+									order = null;
+									renderForm();
+								});
+								card.appendChild(retryBtn);
+							}
+							// else still pending
+						})
+						.catch(function () {});
+				}
+				pollTimer = setInterval(doPoll, 5000);
+
+				// "Start new order" button
+				var backBtn = h(
+					'button',
+					{
+						className: 'smlv-btn smlv-btn-sm',
+						style: 'margin-top:16px;background:transparent;color:var(--smlv-muted,#999);border:1px solid var(--smlv-border,#ccc)',
+					},
+					t('depositNewOrder'),
+				);
+				backBtn.addEventListener('click', function () {
+					cancelPoll();
+					order = null;
+					renderForm();
+				});
+				card.appendChild(backBtn);
+			}
+
+			function renderSuccess(amountSmlv) {
+				cancelPoll();
+				card.innerHTML = '';
+				card.appendChild(
+					h('div', { style: 'text-align:center;padding:32px 0' }, [
+						h(
+							'div',
+							{ style: 'font-size:48px;margin-bottom:12px' },
+							'\u2705',
+						),
+						h(
+							'div',
+							{
+								style: 'font-size:18px;font-weight:700;margin-bottom:8px',
+							},
+							t('depositSuccess'),
+						),
+						h(
+							'div',
+							{
+								style: 'color:var(--smlv-muted,#666);font-size:14px',
+							},
+							t('depositSuccessHint', {
+								amount: amountSmlv,
+							}),
+						),
+					]),
+				);
+				cb.onSuccess && cb.onSuccess({ amount_smlv: amountSmlv });
 			}
 
 			initialLoad();
