@@ -159,6 +159,17 @@ class SmlvBalanceWidget extends Widget
                 );
             }
             // Default: 'mini' — single-line inline bar for navbars
+            // Auto-generate deposit_url so the Deposit button appears without extra config
+            if (empty($options['deposit_url'])) {
+                $returnUrl = Yii::$app->request->absoluteUrl;
+                $depositUrl = Yii::$app->smlv->generateDepositUrl(
+                    $this->subscriberId,
+                    $returnUrl
+                );
+                if ($depositUrl !== null) {
+                    $options['deposit_url'] = $depositUrl;
+                }
+            }
             return $generator->generateMiniWidget(
                 $this->subscriberId,
                 $this->email,
