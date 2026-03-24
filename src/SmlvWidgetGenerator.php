@@ -64,7 +64,7 @@ class SmlvWidgetGenerator
     public function __construct(
         SmlvClient $client,
         ?string $cdnUrl = null,
-        string $scriptVersion = 'v2',
+        string $scriptVersion = 'v2.2',
         ?string $apiUrl = null
     ) {
         $this->client        = $client;
@@ -105,6 +105,18 @@ class SmlvWidgetGenerator
         array $options = []
     ): string {
         return $this->generateEmbed($externalSubscriberId, $email, 'balance', $options);
+    }
+
+    /**
+     * Mini inline bar embed — balance amount + Deposit button in one line.
+     * Designed for navbar integration. Pass 'deposit_url' in $options to show the button.
+     */
+    public function generateMiniWidget(
+        string $externalSubscriberId,
+        string $email = '',
+        array $options = []
+    ): string {
+        return $this->generateEmbed($externalSubscriberId, $email, 'mini', $options);
     }
 
     /** Transactions history widget embed. */

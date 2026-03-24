@@ -64,7 +64,7 @@
 		'.smlv-copy-box span{flex:1;}',
 		/* Balance grid */
 		'.smlv-btn-row{display:flex;gap:8px;flex-shrink:0; margin-top:12px; margin-bottom:12px;}',
-		'.smlv-bal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:16px;}',
+		'.smlv-bal-grid{margin-bottom:16px;}',
 		'.smlv-bal-card{background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:14px;}',
 		'.smlv-bal-cur{font-size:12px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;margin-bottom:4px;}',
 		'.smlv-bal-amt{font-size:20px;font-weight:800;line-height:1.2;overflow:hidden;word-break:break-all;}',
@@ -123,6 +123,11 @@
 		'.smlv-confirm{background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:14px;margin-top:12px;font-size:13px;}',
 		'.smlv-confirm p{margin:0 0 12px;color:var(--smlv-text);line-height:1.5;}',
 		'.smlv-confirm .smlv-form-actions{margin-top:0;padding-top:0;border-top:none;}',
+		/* Mini bar (navbar inline widget) */
+		'.smlv-mini-bar{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);font-size:13px;vertical-align:middle;white-space:nowrap;}',
+		'.smlv-mini-label{font-size:11px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;letter-spacing:.05em;}',
+		'.smlv-mini-amt{font-weight:700;color:var(--smlv-text);}',
+		'.smlv-mini-dep{padding:3px 10px!important;font-size:12px!important;margin:0!important;}',
 	].join('');
 
 	// --- i18n -------------------------------------------------------------------
@@ -3706,8 +3711,61 @@
 				}
 			}
 		},
+
+		/**
+		 * Mini inline bar: shows first SMLV balance + Deposit button.
+		 * Designed for navbar embedding — single line, no card chrome.
+		 * Skips mount()'s resolve flow; calls /balance directly.
+		 */
+		mini: function (root, api, cfg, cb) {
+			var t = mkT(cfg.lang);
+
+			/* Replace the smlv-card wrapper with a minimal inline bar */
+			root.innerHTML = '';
+			var amtEl = h('span', { className: 'smlv-mini-amt' }, '\u2026');
+			var bar = h('div', { className: 'smlv-mini-bar' }, [
+				h('span', { className: 'smlv-mini-label' }, 'SMLV'),
+				amtEl,
+			]);
+			root.appendChild(bar);
+
+			api.get('/balance')
+				.then(function (res) {
+					var balances =
+						res.data && res.data.balances ? res.data.balances : [];
+					if (balances.length) {
+						var b = balances[0];
+						amtEl.textContent =
+							fmtBal(b.amount) +
+							'\u00a0' +
+							(b.currency || 'SMLV').toUpperCase();
+					} else {
+						amtEl.textContent = '0.00000000\u00a0SMLV';
+					}
+					if (cfg.depositUrl) {
+						var depBtn = h(
+							'button',
+							{
+								className:
+									'smlv-btn smlv-btn-sm smlv-btn-ok smlv-mini-dep',
+							},
+							t('deposit') || 'Deposit',
+						);
+						depBtn.addEventListener('click', function () {
+							window.location.href = cfg.depositUrl;
+						});
+						bar.appendChild(depBtn);
+					}
+					cb.onReady && cb.onReady();
+				})
+				.catch(function (e) {
+					amtEl.textContent = '—';
+					cb.onError && cb.onError(e);
+				});
+		},
 	};
 	Renderers.account.skipResolve = true;
+	Renderers.mini.skipResolve = true;
 
 	// --- Widget instance ---------------------------------------------------------
 

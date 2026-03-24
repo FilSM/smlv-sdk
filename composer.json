@@ -32,6 +32,6 @@
 	"prefer-stable": true,
 	"extra": {
 		"widget-bundle": "widget/smlv-widget.js",
-		"widget-cdn": "https://cdn.smlvcoin.com/v2/smlv-widget.js"
+		"widget-cdn": "https://cdn.smlvcoin.com/v2.2/smlv-widget.js"
 	}
 }
