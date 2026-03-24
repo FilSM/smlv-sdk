@@ -336,6 +336,8 @@ $token = $widget->generateToken($subscriber->id, $email, 'deposit');
 
 `SmlvChargeBehavior` deducts a deposit automatically every time a model is saved (`EVENT_AFTER_INSERT`). All data is provided via callables — **no interface implementation required** in your model.
 
+### Option A — Raw behavior (simple cases)
+
 ```php
 use Smlv\Sdk\Yii2\SmlvChargeBehavior;
 
@@ -359,14 +361,99 @@ class Order extends ActiveRecord
 }
 ```
 
-**How it works:**
+### Option B — Wrapper trait (recommended for SaaS, eGram pattern)
 
-1. After `$order->save()`, the behavior calls `Yii::$app->smlv->billing->chargeByEmail()`
-2. If the `smlv` component is not configured (console, test, dev without config) — silently skipped
-3. If `email` or `amount` resolves to empty / zero — silently skipped
-4. Errors are logged to `Yii::error(..., 'smlv')` and do not break the original save
+For production SaaS apps, the recommended approach is to put all charge logic into a reusable **wrapper trait** in your own codebase.
+This is exactly the pattern used in **eGram** via `common\traits\smlv\SmlvChargeableTrait`.
 
-> **Tip:** All four properties (`email`, `amount`, `description`, `metadata`) accept either a `callable` or a scalar value. Use callables when you need `$this` context.
+**The trait provides:**
+- `smlvBehaviorConfig()` — returns ready `SmlvChargeBehavior` config to register in `behaviors()`
+- `getChargeEmail()` — resolves subscriber email (main client contact → abonent admin user fallback)
+- `getChargeAmount()` — converts EUR price from pricelist to SMLV; **returns `null` if the subscriber has no SMLV account** (opt-in guard: no account = fall back to bank billing)
+- `getChargeDescription()` / `getChargeMetadata()` — human label + EUR/rate/SMLV metadata for reporting
+- **abstract** `getSmlvActionType()` — the only method your model must implement
+
+**In your trait:**
+
+```php
+// common/traits/smlv/SmlvChargeableTrait.php  (your SaaS code)
+namespace common\traits\smlv;
+
+use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+
+trait SmlvChargeableTrait
+{
+    protected function smlvBehaviorConfig(): array
+    {
+        return [
+            'class'       => SmlvChargeBehavior::class,
+            'email'       => fn() => $this->getChargeEmail(),
+            'amount'      => fn() => $this->getChargeAmount(),
+            'description' => fn() => $this->getChargeDescription(),
+            'metadata'    => fn() => $this->getChargeMetadata(),
+        ];
+    }
+
+    abstract protected function getSmlvActionType(): ?string;
+
+    public function getChargeAmount(): ?float
+    {
+        // Opt-in guard: skip SMLV charge when the subscriber has no SMLV account
+        // (returns null) — traditional bank billing will apply instead.
+        $accountRef = Yii::$app->smlv->billing->resolveAccountByEmail($this->getChargeEmail());
+        if ($accountRef === null) {
+            return null;
+        }
+
+        $eurPrice = SmlvPricelist::getPriceFor($this->getSmlvActionType());
+        $rate     = $this->fetchSmlvRate();
+
+        return ($eurPrice && $rate > 0) ? round($eurPrice / $rate, 8) : null;
+    }
+
+    // ... getChargeEmail(), getChargeDescription(), getChargeMetadata(), fetchSmlvRate()
+}
+```
+
+**In each model:**
+
+```php
+// common/models/bill/Bill.php
+use common\traits\smlv\SmlvChargeableTrait;
+
+class Bill extends BaseDoc
+{
+    use SmlvChargeableTrait;
+
+    public function behaviors(): array
+    {
+        return ArrayHelper::merge(parent::behaviors(), [
+            'smlvCharge' => $this->smlvBehaviorConfig(),
+        ]);
+    }
+
+    // The only method you must implement — everything else is handled by the trait
+    protected function getSmlvActionType(): ?string
+    {
+        return $this->doc_type === 'job_request'
+            ? SmlvPricelist::TYPE_ORDER
+            : SmlvPricelist::TYPE_BILL;
+    }
+}
+```
+
+**How the opt-in guard works:**
+
+| Subscriber state            | `resolveAccountByEmail()` | Result                          |
+| --------------------------- | ------------------------- | ------------------------------- |
+| Has SMLV account            | returns account ref       | Charged in SMLV tokens          |
+| No SMLV account             | returns `null`            | Skipped → bank invoice issued   |
+| `smlv` component absent     | —                         | Skipped (CLI, test, dev)        |
+| API error                   | throws (caught)           | Skipped, warning logged         |
+
+Errors are logged to `Yii::error(..., 'smlv')` and **never break the original AR save** — the charge is best-effort.
+
+> **Tip:** All four `SmlvChargeBehavior` properties (`email`, `amount`, `description`, `metadata`) accept either a `callable` or a scalar value. Use callables when you need `$this` context.
 
 ---
 

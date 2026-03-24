@@ -580,7 +580,7 @@ $token = $smlv->generateWidgetToken(
 
 `SmlvChargeBehavior` deducts a deposit automatically on `EVENT_AFTER_INSERT`. It requires **no interface implementation** — everything is configured via callables directly in `behaviors()`.
 
-### Minimal example
+### Option A — Raw behavior (simple cases)
 
 ```php
 use Smlv\Sdk\Yii2\SmlvChargeBehavior;
@@ -609,41 +609,111 @@ class Order extends \yii\db\ActiveRecord
 | `description` | `callable\|string` | No       | Text shown in SMLV transaction history               |
 | `metadata`    | `callable\|array`  | No       | Arbitrary key-value stored alongside the transaction |
 
-### Full example — SaaS Order model
+### Option B — Wrapper trait (recommended for SaaS, eGram pattern)
+
+For real-world SaaS apps, create a reusable **wrapper trait** in your own codebase that encapsulates
+all charge logic. Your models then only implement one abstract method.
+This is exactly the pattern used in **eGram** via `common\traits\smlv\SmlvChargeableTrait`.
+
+**Create the trait once** in your SaaS app:
 
 ```php
-use Smlv\Sdk\Yii2\SmlvChargeBehavior;
-use yii\helpers\ArrayHelper;
+// common/traits/smlv/SmlvChargeableTrait.php
+namespace common\traits\smlv;
 
-class Order extends \yii\db\ActiveRecord
+use Yii;
+use Smlv\Sdk\Yii2\SmlvChargeBehavior;
+use common\models\smlv\SmlvPricelist;
+
+trait SmlvChargeableTrait
 {
+    // -------------------------------------------------------------------------
+    // Register in behaviors() by calling $this->smlvBehaviorConfig()
+    // -------------------------------------------------------------------------
+    protected function smlvBehaviorConfig(): array
+    {
+        return [
+            'class'       => SmlvChargeBehavior::class,
+            'email'       => fn() => $this->getChargeEmail(),
+            'amount'      => fn() => $this->getChargeAmount(),
+            'description' => fn() => $this->getChargeDescription(),
+            'metadata'    => fn() => $this->getChargeMetadata(),
+        ];
+    }
+
+    // -------------------------------------------------------------------------
+    // Abstract: model must declare which pricelist action type applies
+    // -------------------------------------------------------------------------
+    abstract protected function getSmlvActionType(): ?string;
+
+    // -------------------------------------------------------------------------
+    // Amount — opt-in guard: return null if subscriber has no SMLV account
+    // -------------------------------------------------------------------------
+    public function getChargeAmount(): ?float
+    {
+        if (!Yii::$app->has('smlv')) {
+            return null;                // CLI / test / dev without config
+        }
+
+        $email = $this->getChargeEmail();
+        if (empty($email)) {
+            return null;
+        }
+
+        // ✓ Opt-in guard: no SMLV account → skip charge, bank invoice applies instead
+        $accountRef = Yii::$app->smlv->billing->resolveAccountByEmail($email);
+        if ($accountRef === null) {
+            return null;
+        }
+
+        $eurPrice = SmlvPricelist::getPriceFor($this->getSmlvActionType());
+        $rate     = $this->fetchSmlvRate();  // cached 1 h in Yii::$app->cache
+
+        return ($eurPrice && $rate > 0) ? round($eurPrice / $rate, 8) : null;
+    }
+
+    // ... getChargeEmail(), getChargeDescription(), getChargeMetadata(), fetchSmlvRate()
+}
+```
+
+**Each model uses the trait with a single abstract method:**
+
+```php
+// common/models/bill/Bill.php
+use common\traits\smlv\SmlvChargeableTrait;
+use common\models\smlv\SmlvPricelist;
+
+class Bill extends BaseDoc
+{
+    use SmlvChargeableTrait;
+
     public function behaviors(): array
     {
         return ArrayHelper::merge(parent::behaviors(), [
-            'smlvCharge' => [
-                'class' => SmlvChargeBehavior::class,
-
-                // Email of the subscriber who will be charged
-                'email' => fn() => $this->subscriber->mainEmail,
-
-                // Dynamic amount — e.g. a flat fee per order line item
-                'amount' => fn() => count($this->items) * 0.50,
-
-                // Description visible in SMLV transaction log
-                'description' => fn() => 'Order #' . $this->id . ' (' . $this->status . ')',
-
-                // Free-form metadata for your own reporting
-                'metadata' => fn() => [
-                    'order_id'    => $this->id,
-                    'plan'        => $this->subscriber->plan_name,
-                    'items_count' => count($this->items),
-                    'source'      => 'my-saas',
-                ],
-            ],
+            'smlvCharge' => $this->smlvBehaviorConfig(),  // ← from trait
         ]);
+    }
+
+    // The only method you must implement — all other charge logic is in the trait
+    protected function getSmlvActionType(): ?string
+    {
+        return $this->doc_type === 'job_request'
+            ? SmlvPricelist::TYPE_ORDER
+            : SmlvPricelist::TYPE_BILL;
     }
 }
 ```
+
+### Opt-in logic: account existence = billing opt-in
+
+The guard in `getChargeAmount()` uses `resolveAccountByEmail()` — if the subscriber does **not** have a SMLV account, the charge is silently skipped and the SaaS falls back to traditional bank billing:
+
+| Subscriber state            | `resolveAccountByEmail()` | Result                          |
+| --------------------------- | ------------------------- | ------------------------------- |
+| Has SMLV account            | returns account ref       | Charged in SMLV tokens          |
+| No SMLV account             | returns `null`            | Skipped → bank invoice issued   |
+| `smlv` component absent     | —                         | Skipped (CLI, test, dev)        |
+| API error                   | exception (caught)        | Skipped, warning logged         |
 
 ### Silent skip conditions
 
