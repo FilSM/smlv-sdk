@@ -1,314 +1,263 @@
-# SMLV SDK Implementation Summary
+﻿# SMLV SDK — Implementation Summary
 
-## Project Overview
+> Last updated: v2.2.x  
+> This document reflects the **current** state of the SDK and its integration in eGram.
 
-This document summarizes the complete implementation of the SMLV SDK - a drop-in billing solution for SaaS applications.
+---
 
 ## Implemented Components
 
-### 1. Core SDK Library (`packages/smlv-sdk/`)
+### 1. Core SDK (`src/`)
 
-#### SmlvClient (`src/SmlvClient.php`)
+| File | Purpose |
+| ---- | ------- |
+| `SmlvClient.php` | Low-level HTTP client. Signs all requests with HMAC-SHA256. Account CRUD, balance, transactions, JWT token generation, webhook verification. |
+| `SmlvBillingService.php` | High-level billing façade. `charge()`, `chargeByEmail()`, `resolveAccountByEmail()`, `hasBalance()`, `getBalance()`. In-memory email→accountRef cache per request. |
+| `SmlvBalanceChecker.php` | Balance read/write with TTL caching (`Yii::$app->cache` in Yii2, static in plain PHP). `hasBalance()`, `canAfford()`, `deductBalance()`, `addBalance()`, `syncBalance()`. |
+| `SmlvWidgetGenerator.php` | Generates self-contained HTML blocks (no iframe — DOM-rendered since v2.0). Widget types: `deposit`, `balance`, `mini`, `transactions`, `management`, `account`. |
+| `SmlvWebhookHandler.php` | Verifies HMAC-SHA256 webhook signatures, validates timestamp (5-min anti-replay), parses payload. |
 
-- **Purpose**: Main API client for SMLV platform integration
-- **Features**:
-    - Account management (CRUD operations)
-    - Balance operations (get, sync)
-    - Transaction management (create, list)
-    - Request signing with HMAC-SHA256
-    - JWT token generation for widgets
-    - Webhook signature verification
-- **Security**: All requests signed with API key/secret, timestamp validation
+**Exception hierarchy** (`src/Exceptions/`):
 
-#### SmlvBalanceChecker (`src/SmlvBalanceChecker.php`)
+- `SmlvException` — base
+- `SmlvApiException` — 4xx / 5xx from API
+- `SmlvAuthException` — authentication failures
+- `SmlvValidationException` — invalid input
 
-- **Purpose**: Balance checking with caching
-- **Features**:
-    - `hasBalance()` - Check if balance > 0
-    - `getBalance()` - Get current balance (cached)
-    - `canAfford()` - Check if balance >= amount
-    - `deductBalance()` - Create debit transaction
-    - `addBalance()` - Create credit transaction
-    - `syncBalance()` - Force refresh from API
-    - In-memory caching with TTL (default 300s)
-- **Optimization**: Automatic cache invalidation after transactions
+---
 
-#### SmlvWidgetGenerator (`src/SmlvWidgetGenerator.php`)
+### 2. Yii2 Integration (`src/Yii2/`)
 
-- **Purpose**: Generate HTML for embedding SMLV UI widgets
-- **Widget Types**:
-    - Deposit widget (payment form)
-    - Balance widget (compact display)
-    - Transactions widget (history)
-    - Management widget (account settings)
-- **Customization**: Width, height, theme, language, responsive mode, border radius
-- **Output**: Iframe HTML with JWT authentication
+| File | Purpose |
+| ---- | ------- |
+| `SmlvComponent.php` | Yii2 Application Component. Lazy-initializes `client`, `billing`, `balanceChecker`, `widgetGenerator`, `webhookHandler`. |
+| `SmlvChargeBehavior.php` | AR Behavior. Fires on `EVENT_BEFORE_INSERT` (balance pre-check) and `EVENT_AFTER_INSERT` (actual charge). Everything via callables — no interface required. |
+| `SmlvBalanceWidget.php` | Yii2 Widget. Wraps `SmlvWidgetGenerator` with auto language detection and deposit-URL generation. Default type: `mini`. |
+| `SmlvBalanceFilter.php` | Action filter for controllers. Redirects or throws 402 when subscriber balance is insufficient. |
 
-#### SmlvWebhookHandler (`src/SmlvWebhookHandler.php`)
+**`SmlvComponent` configuration properties:**
 
-- **Purpose**: Handle and verify webhooks from SMLV platform
-- **Features**:
-    - Signature verification (HMAC-SHA256)
-    - Timestamp validation (anti-replay, 5 min window)
-    - Payload parsing and validation
-- **Supported Events**:
-    - `account.created`, `account.updated`, `account.closed`
-    - `balance.updated`
-    - `transaction.pending`, `transaction.completed`, `transaction.failed`, `transaction.reversed`
+| Property | Default | Description |
+| -------- | ------- | ----------- |
+| `apiKey` | — | Public API key (required) |
+| `apiSecret` | — | Secret signing key (required) |
+| `apiUrl` | `'https://api.smlvcoin.com'` | REST API base URL |
+| `widgetUrl` | `'https://cdn.smlvcoin.com'` | CDN base URL for widget script |
+| `appUrl` | `'https://smlvcoin.com'` | App base URL; used by `generateDepositUrl()` |
+| `widgetSecret` | — | HMAC secret for widget JWT signing |
+| `widgetScriptVersion` | `'v2.2'` | CDN subfolder version path |
+| `balanceCacheTtl` | `300` | Balance cache TTL in seconds |
+| `currency` | `'SMLV'` | Default transaction currency |
 
-#### Exception Hierarchy (`src/Exceptions/`)
-
-- `SmlvException` - Base exception
-- `SmlvApiException` - API errors (4xx, 5xx)
-- `SmlvAuthException` - Authentication failures
-- `SmlvValidationException` - Input validation errors
-
-### 2. Framework Integrations
-
-#### Yii2 Integration (`src/Yii2/`)
-
-**SmlvBalanceFilter** (`SmlvBalanceFilter.php`)
-
-- Action filter for controllers
-- Configuration options:
-    - `balanceChecker` - BalanceChecker instance or callable
-    - `accountReferenceCallback` - Callable to get user's account reference
-    - `only` - Actions requiring balance check
-    - `minBalance` - Minimum required balance (default: 0.0)
-    - `errorMessage` - Custom error message
-    - `redirectUrl` - Redirect instead of exception
-    - `allowGuests` - Allow guest access (default: false)
-- Usage: Apply in controller's `behaviors()` method
-
-#### Laravel Integration (`src/Laravel/`)
-
-**SmlvBalanceMiddleware** (`SmlvBalanceMiddleware.php`)
-
-- Route middleware for balance checking
-- Parameters:
-    - `$minBalance` - Minimum required balance (default: 0.0)
-    - `$accountField` - User model field name (default: 'smlv_account_reference')
-- Returns JSON error responses (401, 403, 503)
-- Usage: Register in `Kernel.php`, apply to routes
-
-### 3. eGram Integration Example
-
-#### Migration (`console/migrations/m260305_120000_add_smlv_account_reference_to_abonent.php`)
-
-- Adds `smlv_account_reference` column to `abonent` table
-- Type: VARCHAR(64) NULL
-- Unique index for fast lookups
-- Can be rolled back with `safeDown()`
-
-#### Component (`src/Yii2/SmlvComponent.php`)
-
-- Yii2 application component for easy access (part of SDK)
-    - `apiSecret` - SMLV API secret (required)
-    - `apiUrl` - API base URL (default: https://api.smlvcoin.com)
-    - `widgetUrl` - Widget base URL (default: https://widget.smlvcoin.com)
-    - `balanceCacheTtl` - Cache TTL in seconds (default: 300)
-- Lazy initialization of client, balance checker, widget generator, webhook handler
-- Helper methods: `createAccountForUser()`, `getOrCreateAccountForUser()`
-
-#### Webhook Controller (`backend/controllers/SmlvController.php`)
-
-- Endpoint: `/smlv/webhook`
-- CSRF validation disabled for webhooks
-- Automatic signature verification
-- Event routing and processing
-- Handlers for all webhook events:
-    - Links accounts to users
-    - Clears balance cache
-    - Logs events and errors
-    - Triggers notifications (TODOs)
-
-#### Example View (`backend/views/billing/smlv-example.php`)
-
-- Complete billing page demonstration
-- Features:
-    - Current balance display with alert styling
-    - Embedded balance widget (compact)
-    - Deposit widget (full payment form)
-    - Transactions history widget
-    - Account management widget
-- Auto-creates SMLV account if missing
-- Responsive layout with Bootstrap panels
-
-### 4. Documentation
-
-#### README.md (`packages/smlv-sdk/README.md`)
-
-- Quick start guide
-- Installation instructions
-- Basic usage examples
-- Framework-specific examples (Yii2, Laravel, Symfony)
-- API reference overview
-
-#### INTEGRATION_EXAMPLE.md (`packages/smlv-sdk/INTEGRATION_EXAMPLE.md`)
-
-- Step-by-step integration guide for eGram
-- 7 steps from installation to testing
-- Complete code examples
-- Configuration templates
-- Manual balance operations
-- Integration checklist
-
-#### DEVELOPER_GUIDE.md (`packages/smlv-sdk/DEVELOPER_GUIDE.md`)
-
-- Comprehensive developer documentation
-- 12 chapters covering all aspects:
-    1. Introduction and overview
-    2. Installation instructions
-    3. Quick start tutorial
-    4. Framework integration (Yii2, Laravel, Symfony)
-    5. Complete API reference
-    6. Widget embedding guide
-    7. Webhook handling
-    8. Balance checking strategies
-    9. Advanced usage patterns
-    10. Security best practices
-    11. Testing and debugging
-    12. Troubleshooting guide
-
-## Architecture Decisions
-
-### 1. Isolated SDK Approach
-
-- **Why**: Minimize integration effort for SaaS developers
-- **Benefit**: Only 1 field, 1 middleware, 1 webhook endpoint, 1 widget embed required
-- **Alternative Rejected**: Tight integration with separate database tables (too invasive)
-
-### 2. Iframe-Based Widgets
-
-- **Why**: No UI development required by SaaS developers
-- **Benefit**: SMLV platform controls UI updates without SDK updates
-- **Security**: JWT authentication with expiration
-
-### 3. In-Memory Balance Caching
-
-- **Why**: Reduce API calls for frequent balance checks
-- **Benefit**: Lower latency, reduced API costs
-- **TTL**: 300 seconds (5 minutes) default, configurable
-- **Invalidation**: Automatic after deduct/add operations
-
-### 4. HMAC-SHA256 Signatures
-
-- **Why**: Secure API authentication without OAuth overhead
-- **Benefit**: Simple implementation, stateless
-- **Protection**: Timestamp validation prevents replay attacks
-
-### 5. Exception Hierarchy
-
-- **Why**: Allow granular error handling
-- **Types**: Validation, Auth, API, General
-- **Benefit**: Different handling strategies per error type
-
-## Integration Requirements
-
-### Minimal SaaS Changes
-
-1. **Database**: Add 1 field (`smlv_account_reference`)
-2. **Middleware**: Apply balance filter to protected controllers/routes
-3. **Webhook**: Add 1 endpoint (`/smlv/webhook`)
-4. **View**: Embed widgets where needed
-
-### Configuration
+**Magic property shortcuts on the component:**
 
 ```php
-// Yii2 example
-'components' => [
-    'smlv' => [
-        'class' => 'common\components\SmlvComponent',
-        'apiKey' => getenv('SMLV_API_KEY'),
-        'apiSecret' => getenv('SMLV_API_SECRET'),
-    ],
+Yii::$app->smlv->billing          // SmlvBillingService
+Yii::$app->smlv->balanceChecker   // SmlvBalanceChecker
+Yii::$app->smlv->widgetGenerator  // SmlvWidgetGenerator
+Yii::$app->smlv->webhookHandler   // SmlvWebhookHandler
+Yii::$app->smlv->client           // SmlvClient
+```
+
+---
+
+### 3. Laravel Integration (`src/Laravel/`)
+
+`SmlvBalanceMiddleware` — route middleware that checks minimum balance before allowing access. Returns JSON 402 or redirects.
+
+---
+
+## Widget System (v2.0+)
+
+Widgets are **DOM-rendered** — the CDN script (`smlv-widget.js`) injects a UI block directly into the page. **No iframe.**
+
+| Type | Description | Account required? |
+| ---- | ----------- | ----------------- |
+| `deposit` | Currency → address → copy flow | Auto-resolves |
+| `balance` | Balance grid + optional Sync | Auto-resolves |
+| `mini` | Single-line inline bar + `+` deposit button | No (direct `/balance` fetch) |
+| `transactions` | Paginated transaction history | Auto-resolves |
+| `management` | 3-tab CRUD: Overview / Edit / Danger Zone | Auto-resolves |
+| `account` | Auto-detects: "Create account" OR 4-tab dashboard | No (handles both states) |
+
+Widget flow: PHP generates a signed JWT token → injects `<div data-smlv>` + inline `<script>` → CDN JS picks it up from `window._smlvQueue` → renders into the div.
+
+---
+
+## Opt-in Architecture (no DB field required)
+
+**SMLV account existence = billing opt-in.** The SaaS never stores `smlv_account_reference` in its own DB.
+
+```
+Subscriber creates SMLV account (via `account` widget)
+  → their email is linked in SMLV
+
+On next billable event
+  → SaaS calls resolveAccountByEmail(email)
+  → found?  charge SMLV
+  : not found?  issue bank invoice
+```
+
+`resolveAccountByEmail()` returns `null` for unknown emails (404 = "not opted in"). This is the guard used in `SmlvChargeableTrait::getChargeAmount()` in eGram.
+
+---
+
+## Auto-charge Pattern (eGram)
+
+eGram wraps `SmlvChargeBehavior` in a **shared trait** (`common\traits\smlv\SmlvChargeableTrait`) so individual models only implement one abstract method:
+
+```php
+// common/models/bill/Bill.php
+class Bill extends BaseDoc
+{
+    use SmlvChargeableTrait;
+
+    public function behaviors(): array
+    {
+        return ArrayHelper::merge(parent::behaviors(), [
+            'smlvCharge' => $this->smlvBehaviorConfig(),  // ← from trait
+        ]);
+    }
+
+    // Only method to implement — all other charge logic is in the trait
+    protected function getSmlvActionType(): ?string
+    {
+        return $this->doc_type === 'job_request'
+            ? SmlvPricelist::TYPE_ORDER
+            : SmlvPricelist::TYPE_BILL;
+    }
+}
+```
+
+The trait handles: email resolution via `Abonent` model, opt-in guard, EUR price from `SmlvPricelist`, EUR→SMLV rate conversion (cached 1 h), description and metadata.
+
+---
+
+## Navbar Widget (eGram)
+
+`SmlvBalanceWidget` (type `mini`) is embedded in `top-navbar.php`:
+
+```php
+echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
+    'subscriberId' => (string) $abonent->id,
+    'email'        => $abonent->email,
+    // widgetType = 'mini' by default
+]);
+```
+
+Renders: `Balance: 1272.81 SMLV [+]` inline. The `+` button redirects to the SMLV deposit page via a signed JWT URL from `generateDepositUrl()`.
+
+---
+
+## Configuration (eGram `main-local.php`)
+
+```php
+'smlv' => [
+    'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
+    'apiUrl'       => 'https://api.smlvcoin.com',
+    'apiKey'       => 'pk_live_...',
+    'apiSecret'    => 'sk_live_...',
+    'widgetSecret' => 'ws_live_...',
+    'widgetUrl'    => 'https://cdn.smlvcoin.com',
+    'appUrl'       => 'https://smlvcoin.com',
 ],
 ```
 
-### Usage
+---
 
-```php
-// Check balance
-if (!Yii::$app->smlv->getBalanceChecker()->hasBalance($accountRef)) {
-    return redirect('/billing/deposit');
-}
+## File Structure
 
-// Embed widget
-echo Yii::$app->smlv->getWidgetGenerator()->generateDepositWidget($accountRef, $returnUrl);
 ```
+packages/smlv-sdk/
+├── composer.json
+├── README.md
+├── CHANGELOG.md
+├── DEVELOPER_GUIDE.md
+├── INTEGRATION_EXAMPLE.md
+├── SECURITY.md
+├── widget/
+│   └── smlv-widget.js            # CDN widget script (DOM renderer)
+└── src/
+    ├── SmlvClient.php             # HTTP client + HMAC signing
+    ├── SmlvBillingService.php     # Billing façade (charge, resolveAccountByEmail)
+    ├── SmlvBalanceChecker.php     # Balance read/write + caching
+    ├── SmlvWidgetGenerator.php    # HTML widget generation
+    ├── SmlvWebhookHandler.php     # Webhook verification + parsing
+    ├── Exceptions/
+    │   ├── SmlvException.php
+    │   ├── SmlvApiException.php
+    │   ├── SmlvAuthException.php
+    │   └── SmlvValidationException.php
+    ├── Yii2/
+    │   ├── SmlvComponent.php      # Yii2 app component
+    │   ├── SmlvChargeBehavior.php # AR behavior (EVENT_AFTER_INSERT charge)
+    │   ├── SmlvBalanceWidget.php  # Drop-in Yii2 widget (mini / balance / account)
+    │   └── SmlvBalanceFilter.php  # Action filter for balance-gated controllers
+    └── Laravel/
+        └── SmlvBalanceMiddleware.php
+```
+
+---
 
 ## Features Delivered
 
-✅ **Account Management**
+✅ **Account Management** — CRUD, find by email / external ID, close, reactivate
 
-- Create, read, update, close, reactivate accounts
-- Find by email or external ID
-- Link to existing users
+✅ **Balance Operations** — real-time + cached; debit/credit; manual sync
 
-✅ **Balance Operations**
+✅ **Payment Processing** — deposit widget, transaction history, webhook notifications
 
-- Real-time balance checking
-- Cached balance retrieval
-- Debit/credit transactions
-- Manual sync capability
+✅ **DOM Widgets** (v2.0+) — `mini`, `balance`, `account`, `deposit`, `transactions`, `management`
 
-✅ **Payment Processing**
+✅ **Auto-charge Behavior** — `SmlvChargeBehavior` + wrapper-trait pattern, best-effort (never breaks AR save)
 
-- Deposit widget with multiple payment methods
-- Transaction history
-- Webhook notifications for completion/failure
+✅ **Opt-in without DB field** — account existence = opt-in; bank fallback when no account
 
-✅ **Access Control**
+✅ **Access Control** — `SmlvBalanceFilter` (Yii2), `SmlvBalanceMiddleware` (Laravel)
 
-- Middleware/filter for balance-based access
-- Configurable minimum balance
-- Redirect or exception handling
-- Custom error messages
+✅ **Security** — HMAC-SHA256 signing, JWT widgets, webhook verification, anti-replay
 
-✅ **Security**
+---
 
-- HMAC-SHA256 request signing
-- JWT widget authentication
-- Webhook signature verification
-- Timestamp anti-replay protection
+## Architecture Decisions
 
-✅ **Developer Experience**
+### DOM widgets (not iframe)
+Since v2.0. The CDN script renders directly into the host page DOM. SaaS developers get native page integration and easier CSS customization. SMLV controls UI updates via CDN without requiring SDK updates.
 
-- Framework-agnostic core
-- Yii2, Laravel, Symfony integrations
-- Comprehensive documentation
-- Code examples and templates
+### Opt-in via account existence (no DB field)
+Eliminates the need for a migration in the SaaS DB. The email lookup to SMLV API acts as the gate. Result is cached in memory per request and in `Yii::$app->cache` (1 h) to minimize API calls.
+
+### Wrapper trait pattern for auto-charge
+`SmlvChargeableTrait` (in the SaaS, not in the SDK) centralizes email resolution, EUR→SMLV conversion, and the opt-in guard. Individual models only declare `getSmlvActionType()`. This keeps models thin while billing logic stays in one place.
+
+### Silent fail for charges
+`SmlvChargeBehavior` never breaks an AR save on API errors. Failures are logged to the `smlv` channel (`Yii::error(..., 'smlv')`). Billing is best-effort; reconciliation happens via webhooks and the SMLV dashboard.
+
+---
 
 ## Testing Checklist
 
-- [ ] Install SDK via Composer
-- [ ] Run migration to add field
-- [ ] Configure API credentials
-- [ ] Create test account
-- [ ] Embed deposit widget
-- [ ] Test payment flow
-- [ ] Verify webhook reception
-- [ ] Apply balance filter
-- [ ] Test zero-balance restriction
-- [ ] Check balance caching
-- [ ] Test transaction history widget
-- [ ] Verify error handling
+- [ ] `composer require smlv/sdk` — no extra migration needed
+- [ ] Configure component in `main-local.php` (apiKey, apiSecret, widgetSecret, widgetUrl, appUrl)
+- [ ] Embed `SmlvBalanceWidget` (mini) in navbar
+- [ ] Embed `SmlvBalanceWidget` (account) on subscriber page — test "Create account" flow
+- [ ] Add `SmlvChargeableTrait` to a billable model, implement `getSmlvActionType()`
+- [ ] Verify charge fires on model save when subscriber has SMLV account
+- [ ] Verify charge is skipped (bank invoice logic runs) when subscriber has no SMLV account
+- [ ] Test `+` button → deposit redirect URL → return to app
+- [ ] Verify balance updates in mini widget after deposit
+- [ ] Check `Yii::error` log on API failure — confirm AR save still succeeds
 
 ## Next Steps
 
-### For eGram Integration
+### For other SaaS platforms
 
-1. Get SMLV API credentials from dashboard
-2. Update `.env` or config with credentials
-3. Run migration: `php yii migrate`
-4. Configure webhook URL in SMLV dashboard
-5. Test integration with sandbox credentials
-6. Deploy to production
-
-### For Other SaaS Platforms
-
-1. Install SDK: `composer require smlv/sdk`
-2. Follow framework-specific guide in DEVELOPER_GUIDE.md
+1. `composer require smlv/sdk`
+2. Config: `apiKey`, `apiSecret`, `widgetSecret`, `widgetUrl`, `appUrl`
+3. No DB migration needed
+4. Embed `account` widget on subscriber page (handles "Create account" + dashboard in one widget)
+5. Add `SmlvChargeBehavior` to billable models (or create a wrapper trait)
+6. Optional: add webhook endpoint for balance-change events
 3. Add 1 database field for account reference
 4. Configure SDK client with API credentials
 5. Apply middleware to protected routes
@@ -316,54 +265,17 @@ echo Yii::$app->smlv->getWidgetGenerator()->generateDepositWidget($accountRef, $
 7. Embed widgets in billing views
 8. Test and deploy
 
-## File Structure
 
-```
-packages/smlv-sdk/
-├── composer.json                     # Package definition
-├── README.md                         # Quick start guide
-├── DEVELOPER_GUIDE.md               # Complete documentation
-├── INTEGRATION_EXAMPLE.md           # eGram integration tutorial
-└── src/
-    ├── SmlvClient.php               # API client (core)
-    ├── SmlvBalanceChecker.php       # Balance operations
-    ├── SmlvWidgetGenerator.php      # Widget HTML generation
-    ├── SmlvWebhookHandler.php       # Webhook processing
-    ├── Exceptions/
-    │   ├── SmlvException.php        # Base exception
-    │   ├── SmlvApiException.php     # API errors
-    │   ├── SmlvAuthException.php    # Auth errors
-    │   └── SmlvValidationException.php # Validation errors
-    ├── Yii2/
-    │   ├── SmlvBalanceFilter.php    # Yii2 action filter
-    │   └── SmlvComponent.php        # Yii2 app component
-    └── Laravel/
-        └── SmlvBalanceMiddleware.php # Laravel middleware
+---
 
-eGram Integration:
-├── console/migrations/
-│   └── m260305_120000_add_smlv_account_reference_to_abonent.php
-├── backend/controllers/
-│   └── SmlvController.php           # Webhook handler
-└── backend/views/billing/
-    └── smlv-example.php             # Widget demonstration
-```
+## Security
 
-## Performance Considerations
-
-- **Balance Caching**: Reduces API calls by 95%+ (5-minute TTL)
-- **Lazy Loading**: Components initialized only when used
-- **Efficient Widgets**: Iframes load independently, don't block page load
-- **Webhook Processing**: Async event handling via background jobs (recommended)
-
-## Security Considerations
-
-- **API Credentials**: Store in environment variables, never commit
-- **Request Signing**: All API requests signed with HMAC-SHA256
-- **Webhook Verification**: Signatures verified, timestamps checked (5-min window)
-- **Widget Authentication**: JWT tokens with expiration
-- **HTTPS Only**: All communication over HTTPS
-- **Input Validation**: All user input sanitized before API calls
+- API credentials stored outside VCS (environment variables / `main-local.php`)
+- All API requests signed HMAC-SHA256; timestamp validates anti-replay
+- Widget JWTs: HS256, TTL 900 s, one-time `jti` enforced server-side
+- Webhook signatures verified before payload processing; 5-min timestamp window
+- TLS 1.2+ required
+- Widget tokens injected into inline `<script>`  never in URL / query string
 
 ## Maintenance
 
@@ -375,34 +287,6 @@ composer update smlv/sdk
 
 ### Monitoring
 
-- Log all webhook events
-- Monitor balance check failures
-- Track API response times
-- Alert on signature verification failures
-
-### Debugging
-
-- Enable debug mode: `$client->setDebug(true)`
-- Check webhook logs
-- Verify API credentials
-- Test with sandbox environment first
-
-## Conclusion
-
-The SMLV SDK provides a complete, production-ready billing solution with **minimal integration effort**. The architecture prioritizes:
-
-1. **Simplicity**: 1 field, 1 middleware, 1 endpoint, widgets
-2. **Security**: Signed requests, verified webhooks, JWT tokens
-3. **Performance**: Intelligent caching, lazy loading, async webhooks
-4. **Flexibility**: Framework-agnostic core with specific integrations
-5. **Developer Experience**: Comprehensive docs, code examples, error handling
-
-**Total Implementation**: ~2000 lines of code, 4 core classes, 2 framework integrations, 3 documentation files.
-
-**Integration Time**: Estimated 1-2 hours for experienced developer with existing SaaS application.
-
----
-
-**Created**: March 5, 2026  
-**Version**: 1.0.0  
-**Status**: Complete ✅
+- `Yii::error(..., 'smlv')` channel for charge failures
+- Monitor `resolveAccountByEmail()` miss rate (indicates opt-out or email mismatch)
+- Verify webhook signature failures in API logs
