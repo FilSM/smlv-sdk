@@ -117,7 +117,7 @@
 		'.smlv-danger-title{font-size:13px;font-weight:700;color:var(--smlv-err);margin-bottom:8px;}',
 		'.smlv-danger-desc{font-size:13px;color:var(--smlv-muted);margin-bottom:14px;line-height:1.5;}',
 		'.smlv-btn-danger{background:#ef4444;color:#fff;}.smlv-btn-danger:hover{background:#dc2626;}',
-		'.smlv-btn-ok{background:var(--smlv-ok);color:#fff;}.smlv-btn-ok:hover{background:#059669;}',
+		'.smlv-btn-ok{background-color:var(--smlv-ok) !important;color:#fff;}.smlv-btn-ok:hover{background:#059669;}',
 		'.smlv-btn-ghost{background:transparent;color:var(--smlv-muted);border:1px solid var(--smlv-border);}.smlv-btn-ghost:hover{background:var(--smlv-bg2);}',
 		/* Confirm inline */
 		'.smlv-confirm{background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);padding:14px;margin-top:12px;font-size:13px;}',
@@ -127,7 +127,7 @@
 		'.smlv-mini-bar{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);font-size:13px;vertical-align:middle;white-space:nowrap;}',
 		'.smlv-mini-label{font-size:11px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;letter-spacing:.05em;}',
 		'.smlv-mini-amt{font-weight:700;color:var(--smlv-text);}',
-		'.smlv-mini-dep{width:22px;height:22px;padding:0!important;border-radius:50%!important;font-size:16px!important;font-weight:400!important;line-height:1!important;margin:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;}',
+		'.smlv-mini-dep{width:22px;height:22px;padding:0!important;font-size:16px!important;font-weight:400!important;line-height:1!important;margin:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;}',
 	].join('');
 
 	// --- i18n -------------------------------------------------------------------
@@ -3724,7 +3724,7 @@
 			root.innerHTML = '';
 			var amtEl = h('span', { className: 'smlv-mini-amt' }, '\u2026');
 			var bar = h('div', { className: 'smlv-mini-bar' }, [
-				h('span', { className: 'smlv-mini-label' }, 'SMLV'),
+				h('span', { className: 'smlv-mini-label' }, 'Balance:'),
 				amtEl,
 			]);
 			root.appendChild(bar);
