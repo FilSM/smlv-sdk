@@ -127,7 +127,7 @@
 		'.smlv-mini-bar{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;background:var(--smlv-bg2);border:1px solid var(--smlv-border);border-radius:var(--smlv-r);font-size:13px;vertical-align:middle;white-space:nowrap;}',
 		'.smlv-mini-label{font-size:11px;font-weight:700;color:var(--smlv-muted);text-transform:uppercase;letter-spacing:.05em;}',
 		'.smlv-mini-amt{font-weight:700;color:var(--smlv-text);}',
-		'.smlv-mini-dep{padding:3px 10px!important;font-size:12px!important;margin:0!important;}',
+		'.smlv-mini-dep{width:22px;height:22px;padding:0!important;border-radius:50%!important;font-size:16px!important;font-weight:400!important;line-height:1!important;margin:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;}',
 	].join('');
 
 	// --- i18n -------------------------------------------------------------------
@@ -3748,8 +3748,9 @@
 							{
 								className:
 									'smlv-btn smlv-btn-sm smlv-btn-ok smlv-mini-dep',
+								title: t('deposit') || 'Deposit',
 							},
-							t('deposit') || 'Deposit',
+							'+',
 						);
 						depBtn.addEventListener('click', function () {
 							window.location.href = cfg.depositUrl;
