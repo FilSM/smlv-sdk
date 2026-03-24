@@ -50,6 +50,12 @@ class SmlvComponent extends Component
     public $widgetUrl = 'https://cdn.smlvcoin.com';
 
     /**
+     * @var string|null Widget script version path segment (e.g. 'v2.2').
+     * Null means use the SmlvWidgetGenerator default.
+     */
+    public $widgetScriptVersion = null;
+
+    /**
      * @var string SMLV App (frontend) Base URL — used to build deposit page links
      */
     public $appUrl = 'https://smlvcoin.com';
@@ -158,7 +164,7 @@ class SmlvComponent extends Component
             $this->_widgetGenerator = new SmlvWidgetGenerator(
                 $this->getClient(),
                 $this->widgetUrl,
-                'v2',
+                $this->widgetScriptVersion ?? 'v2.2',
                 $this->apiUrl
             );
         }
