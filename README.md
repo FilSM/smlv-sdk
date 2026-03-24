@@ -2,7 +2,7 @@
 
 PHP SDK for integrating SMLV billing into your SaaS application.
 
-> **v2.0.0** — The widget now renders directly into your page DOM (no iframe). Account creation and management are handled fully inside the widget — no extra server-side code required from SaaS developers.
+> **v2.2** — The widget now renders directly into your page DOM (no iframe). Account creation and management are handled fully inside the widget — no extra server-side code required from SaaS developers.
 
 ## Features
 
@@ -81,18 +81,33 @@ echo $widget->generateDepositWidget($subscriber->id, $email, $returnUrl, $option
 // Balance overview + sync
 echo $widget->generateBalanceWidget($subscriber->id, $email, $options);
 
+// Mini inline bar — balance + ⊕ deposit button (ideal for navbars)
+echo $widget->generateMiniWidget($subscriber->id, $email, $options);
+
 // Paginated transaction history
 echo $widget->generateTransactionsWidget($subscriber->id, $email, $options);
 
 // Full account management (overview / edit / danger zone)
 echo $widget->generateManagementWidget($subscriber->id, $email, $options);
+
+// Unified widget: "Create account" OR 4-tab dashboard (Balance | Transactions | Overview | Danger Zone)
+echo $widget->generateAccountWidget($subscriber->id, $email, $options);
 ```
+
+| Type           | Best for                  | Account required? |
+| -------------- | ------------------------- | ----------------- |
+| `deposit`      | Standalone deposit page   | Auto-resolves     |
+| `balance`      | Balance panel / sidebar   | Auto-resolves     |
+| `mini`         | Top navbar inline bar     | No (direct fetch) |
+| `transactions` | Transaction history page  | Auto-resolves     |
+| `management`   | Account settings page     | Auto-resolves     |
+| `account`      | Subscriber detail page    | No (handles both) |
 
 All methods return a self-contained HTML snippet:
 
 ```html
 <div id="smlv-widget-xxxxxxxx" data-smlv></div>
-<script src="https://cdn.smlvcoin.com/v2/smlv-widget.js" async></script>
+<script src="https://cdn.smlvcoin.com/v2.2/smlv-widget.js" async></script>
 <script>
 	window._smlvQueue = window._smlvQueue || [];
 	window._smlvQueue.push({
@@ -235,20 +250,65 @@ $this->app->singleton(SmlvClient::class, fn() => new SmlvClient(
         'apiKey'       => 'pk_live_xxxxxxxxxxxx',
         'apiSecret'    => 'sk_live_xxxxxxxxxxxx',
         'widgetSecret' => 'ws_live_xxxxxxxxxxxx',
+        'widgetUrl'    => 'https://cdn.smlvcoin.com',   // CDN base URL
+        'appUrl'       => 'https://smlvcoin.com',       // used by generateDepositUrl()
+        // 'widgetScriptVersion' => 'v2.2',             // override CDN version (optional)
     ],
 ],
 ```
 
 > `main-local.php` is generated from `environments/` and is listed in `.gitignore` by default in the Yii2 advanced template — safe for secrets.
 
-```php
+**Embed a widget in a view:**
 
-// In a controller/view
-// $subscriber — the subscriber (not $user!). One user may have multiple subscribers.
-echo Yii::$app->smlv->widget->generateDepositWidget(
+```php
+// Full account management widget (subscriber detail page)
+echo Yii::$app->smlv->widgetGenerator->generateAccountWidget(
     (string) $subscriber->id,
     $subscriber->email,
-    Yii::$app->urlManager->createAbsoluteUrl(['/billing/success'])
+    ['prefill' => ['account_type' => 'legal']]
+);
+```
+
+**Drop-in Yii2 widget class (`SmlvBalanceWidget`):**
+
+For even simpler embedding use the bundled Yii2 Widget class — no generator calls needed:
+
+```php
+// Minimal navbar widget (default widgetType = 'mini')
+echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
+    'subscriberId' => (string) $abonent->id,
+    'email'        => $abonent->email,
+]);
+
+// Full account widget for subscriber page
+echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
+    'subscriberId' => (string) $abonent->id,
+    'email'        => $abonent->email,
+    'widgetType'   => 'account',
+    'prefill'      => ['account_type' => 'legal'],
+]);
+```
+
+| Property       | Type     | Default    | Description                                       |
+| -------------- | -------- | ---------- | ------------------------------------------------- |
+| `subscriberId` | `string` | `''`       | Subscriber ID in your system                      |
+| `email`        | `string` | `''`       | Subscriber e-mail                                 |
+| `widgetType`   | `string` | `'mini'`   | `'mini'` \| `'balance'` \| `'account'`            |
+| `compact`      | `bool`   | `false`    | Adds `smlv-widget-compact` CSS class              |
+| `theme`        | `string` | `'light'`  | `'light'` or `'dark'`                             |
+| `language`     | `string` | auto       | BCP-47 tag; defaults to `Yii::$app->language`     |
+| `prefill`      | `array`  | `[]`       | `first_name`, `last_name`, `account_type`         |
+| `widgetOptions`| `array`  | `[]`       | Extra options forwarded to the generator          |
+
+The `mini` type automatically generates a deposit redirect URL via `generateDepositUrl()` — no extra config needed.
+
+**Generate a deposit redirect URL (server-side):**
+
+```php
+$depositUrl = Yii::$app->smlv->generateDepositUrl(
+    (string) $subscriber->id,      // account reference
+    Yii::$app->request->absoluteUrl // return URL after deposit
 );
 ```
 

@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.4] - 2026-03-24
+
+### Fixed
+
+- Mini widget: label changed from `'SMLV'` to `'Balance:'` for clarity
+- Mini widget: deposit button width/height style tweak
+- `.smlv-btn-ok` now uses `background-color !important` to prevent host-page CSS override
+
+## [2.2.3] - 2026-03-24
+
+### Changed
+
+- Mini widget: deposit button replaced text label with `+` icon (round 22×22 px button) and a `title` tooltip for accessibility
+
+## [2.2.2] - 2026-03-24
+
+### Added
+
+- `SmlvBalanceWidget` (Yii2): auto-generates `deposit_url` for the `mini` type using `SmlvComponent::generateDepositUrl()` — no extra config needed in the navbar
+
+## [2.2.1] - 2026-03-24
+
+### Fixed
+
+- `SmlvComponent::getWidgetGenerator()` had `'v2'` hardcoded as `$scriptVersion`, ignoring the `SmlvWidgetGenerator` default. Now uses `$this->widgetScriptVersion ?? 'v2.2'`
+- Added `$widgetScriptVersion` property to `SmlvComponent` (nullable string, default `null`)
+
+## [2.2.0] - 2026-03-24
+
+### Added
+
+- **`mini` widget type** (`Renderers.mini`) — single-line inline bar for navbar embedding:
+    - Shows `Balance: <amount> <currency>` + a `+` deposit button
+    - `skipResolve: true` — calls `/balance` directly, no account resolution flow
+    - CSS classes: `.smlv-mini-bar`, `.smlv-mini-label`, `.smlv-mini-amt`, `.smlv-mini-dep`
+- **`SmlvWidgetGenerator::generateMiniWidget()`** — generates mini bar embed
+- **`Smlv\Sdk\Yii2\SmlvBalanceWidget`** — Yii2 widget class; `$widgetType` property routes to `mini` (default), `balance`, or `account` generator method
+- CDN version bumped to **`v2.2`** (`cdn.smlvcoin.com/v2.2/smlv-widget.js`)
+- `SmlvWidgetGenerator` default `$scriptVersion` changed from `'v2'` to `'v2.2'`
+
+## [2.1.0] - 2026-03-22
+
+### Added
+
+- **`account` widget type** (`Renderers.account`) — unified subscriber widget with `skipResolve: true`:
+    - No account: shows compact "Create SMLV Account" button (auto-creates if `prefill.email` + `first_name` present)
+    - Account exists: 4-tab dashboard — _Balance_ | _Transactions_ | _Overview_ | _Danger Zone_
+    - Merchant-owner mode (`cfg.isMerchantOwner`): bypasses account resolution, shows wallet balance + transactions
+- **`SmlvWidgetGenerator::generateAccountWidget()`** — generates unified account widget embed; merges email into `prefill` automatically
+- **`generateDepositUrl()`** on `SmlvComponent` — generates a signed JWT redirect URL to the SMLV platform deposit page (`partner-widget/deposit`)
+- `sync_data` / `syncData` option forwarded to JS config for the "Update from SaaS" button on the Overview tab
+
 ## [2.0.0] - 2026-06-01
 
 This release is a **complete rewrite** of the widget layer. No database changes required on the SaaS side.
@@ -68,6 +120,12 @@ This release is a **complete rewrite** of the widget layer. No database changes 
 - Exception hierarchy (`SmlvException`, `SmlvApiException`, `SmlvAuthException`, `SmlvValidationException`)
 - Complete documentation and examples
 
-[Unreleased]: https://github.com/smlv/sdk/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/smlv/sdk/compare/v1.0.0...v2.0.0
+[Unreleased]: https://github.com/FilSM/smlv-sdk/compare/v2.2.4...HEAD
+[2.2.4]: https://github.com/FilSM/smlv-sdk/compare/v2.2.3...v2.2.4
+[2.2.3]: https://github.com/FilSM/smlv-sdk/compare/v2.2.2...v2.2.3
+[2.2.2]: https://github.com/FilSM/smlv-sdk/compare/v2.2.1...v2.2.2
+[2.2.1]: https://github.com/FilSM/smlv-sdk/compare/v2.2.0...v2.2.1
+[2.2.0]: https://github.com/FilSM/smlv-sdk/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/FilSM/smlv-sdk/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/FilSM/smlv-sdk/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/smlv/sdk/releases/tag/v1.0.0

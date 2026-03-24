@@ -168,7 +168,23 @@ $html = $widget->generateManagementWidget(
     array  $options = []
 ): string;
 
-// Generic embed (type = 'deposit' | 'balance' | 'transactions' | 'management')
+// Account: auto-detects state — shows "Create account" OR 4-tab dashboard
+//          (Balance | Transactions | Overview | Danger Zone)
+$html = $widget->generateAccountWidget(
+    string $externalUserId,
+    string $email,
+    array  $options = []
+): string;
+
+// Mini: inline single-line bar — balance + ⊕ deposit button (ideal for navbars)
+//       Calls /balance directly (skipResolve = true). No account needed.
+$html = $widget->generateMiniWidget(
+    string $externalUserId,
+    string $email,
+    array  $options = []   // supports 'deposit_url' for the + button
+): string;
+
+// Generic embed (type = 'deposit' | 'balance' | 'transactions' | 'management' | 'account' | 'mini')
 $html = $widget->generateEmbed(
     string $externalUserId,
     string $email,
@@ -225,7 +241,7 @@ $token = $widget->generateToken($userId, $email, 'deposit', ['theme' => 'dark'])
 ```html
 <div id="my-deposit-widget" data-smlv></div>
 
-<script src="https://cdn.smlvcoin.com/v2/smlv-widget.js" async></script>
+<script src="https://cdn.smlvcoin.com/v2.2/smlv-widget.js" async></script>
 <script>
 	window._smlvQueue = window._smlvQueue || [];
 	window._smlvQueue.push({
@@ -366,28 +382,81 @@ Route::post('/webhooks/smlv', [WebhookController::class, 'handle'])
 **Component:**
 
 ```php
-// common/config/main.php
+// common/config/main-local.php  ← excluded from VCS
 'components' => [
     'smlv' => [
         'class'        => \Smlv\Sdk\Yii2\SmlvComponent::class,
-        'apiUrl'       => getenv('SMLV_API_URL'),
-        'apiKey'       => getenv('SMLV_API_KEY'),
-        'apiSecret'    => getenv('SMLV_API_SECRET'),
-        'widgetSecret' => getenv('SMLV_WIDGET_SECRET'),
+        'apiUrl'       => 'https://api.smlvcoin.com',
+        'apiKey'       => 'pk_live_xxxxxxxxxxxx',
+        'apiSecret'    => 'sk_live_xxxxxxxxxxxx',
+        'widgetSecret' => 'ws_live_xxxxxxxxxxxx',
+        'widgetUrl'    => 'https://cdn.smlvcoin.com',   // CDN base URL
+        'appUrl'       => 'https://smlvcoin.com',       // for generateDepositUrl()
+        // 'widgetScriptVersion' => 'v2.2',             // pin CDN version (optional)
     ],
 ],
 ```
 
-**Usage:**
+| Property              | Default                     | Description                              |
+| --------------------- | --------------------------- | ---------------------------------------- |
+| `apiUrl`              | `'https://api.smlvcoin.com'`| SMLV REST API base URL                   |
+| `apiKey`              | —                           | Public API key                           |
+| `apiSecret`           | —                           | Secret API signing key                   |
+| `widgetSecret`        | —                           | HMAC secret for widget token signing     |
+| `widgetUrl`           | `'https://cdn.smlvcoin.com'`| CDN base URL for the widget script       |
+| `appUrl`              | `'https://smlvcoin.com'`    | App base URL; used by `generateDepositUrl()` |
+| `widgetScriptVersion` | `'v2.2'`                    | CDN subfolder version path               |
+
+**Embed widget directly in a view:**
 
 ```php
-use Smlv\Sdk\SmlvWidgetGenerator;
+// Subscriber account page — full account dashboard
+echo Yii::$app->smlv->widgetGenerator->generateAccountWidget(
+    (string) $subscriber->id,
+    $subscriber->email,
+    ['prefill' => ['first_name' => $subscriber->name]]
+);
+```
 
-$widget = new SmlvWidgetGenerator(Yii::$app->smlv->getClient());
+**`SmlvBalanceWidget` — drop-in Yii2 Widget class:**
 
-echo $widget->generateManagementWidget(
-    (string) Yii::$app->user->id,
-    Yii::$app->user->identity->email
+Use `SmlvBalanceWidget` instead of calling the generator directly.
+It handles language detection, auto deposit-URL generation, and theming:
+
+```php
+// Top navbar — mini inline bar (default widgetType = 'mini')
+echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
+    'subscriberId' => (string) $abonent->id,
+    'email'        => $abonent->email,
+]);
+
+// Subscriber detail page — full account dashboard
+echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
+    'subscriberId' => (string) $abonent->id,
+    'email'        => $abonent->email,
+    'widgetType'   => 'account',
+    'prefill'      => ['first_name' => $abonent->name],
+]);
+```
+
+| Property        | Type     | Default   | Description                                      |
+| --------------- | -------- | --------- | ------------------------------------------------ |
+| `subscriberId`  | `string` | `''`      | Subscriber ID in your system                     |
+| `email`         | `string` | `''`      | Subscriber e-mail                                |
+| `widgetType`    | `string` | `'mini'`  | `'mini'` \| `'balance'` \| `'account'`          |
+| `compact`       | `bool`   | `false`   | Adds `smlv-widget-compact` CSS class             |
+| `theme`         | `string` | `'light'` | `'light'` or `'dark'`                           |
+| `language`      | `string` | auto      | BCP-47 tag; defaults to `Yii::$app->language`   |
+| `prefill`       | `array`  | `[]`      | `first_name`, `last_name`, `account_type`        |
+| `widgetOptions` | `array`  | `[]`      | Extra options forwarded to the generator         |
+
+**Generate a deposit redirect URL:**
+
+```php
+// Returns a signed JWT redirect URL; returns null if generation fails
+$depositUrl = Yii::$app->smlv->generateDepositUrl(
+    (string) $subscriber->id,        // account reference
+    Yii::$app->request->absoluteUrl  // return URL after deposit
 );
 ```
 
