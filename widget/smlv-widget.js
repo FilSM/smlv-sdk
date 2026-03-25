@@ -274,6 +274,36 @@
 		return h('div', { className: 'smlv-alert smlv-alert-' + type }, msg);
 	}
 
+	function mkInvoiceTd(api, t, tx) {
+		if (tx.direction === 'credit' && tx.reference) {
+			var btn = h(
+				'button',
+				{
+					className: 'smlv-btn smlv-btn-sm',
+					style: 'white-space:nowrap',
+				},
+				t('printInvoice'),
+			);
+			btn.addEventListener(
+				'click',
+				(function (ref) {
+					return function () {
+						window.open(
+							api.base +
+								'/v1/widget/transaction/' +
+								encodeURIComponent(ref) +
+								'/invoice?widget_token=' +
+								encodeURIComponent(api.token),
+							'_blank',
+						);
+					};
+				})(tx.reference),
+			);
+			return h('td', {}, btn);
+		}
+		return h('td', { style: 'color:var(--smlv-muted)' }, '—');
+	}
+
 	function badge(status) {
 		var map = {
 			completed: 'ok',
@@ -1236,43 +1266,7 @@
 							'tbody',
 							{},
 							items.map(function (tx) {
-								var stPrintTd;
-								if (tx.direction === 'credit' && tx.reference) {
-									var stBtn = h(
-										'button',
-										{
-											className: 'smlv-btn smlv-btn-sm',
-											style: 'white-space:nowrap',
-										},
-										t('printInvoice'),
-									);
-									stBtn.addEventListener(
-										'click',
-										(function (ref) {
-											return function () {
-												window.open(
-													api.base +
-														'/v1/widget/transaction/' +
-														encodeURIComponent(
-															ref,
-														) +
-														'/invoice?widget_token=' +
-														encodeURIComponent(
-															api.token,
-														),
-													'_blank',
-												);
-											};
-										})(tx.reference),
-									);
-									stPrintTd = h('td', {}, stBtn);
-								} else {
-									stPrintTd = h(
-										'td',
-										{ style: 'color:var(--smlv-muted)' },
-										'—',
-									);
-								}
+								var stPrintTd = mkInvoiceTd(api, t, tx);
 								return h('tr', {}, [
 									h('td', {}, fmtDate(tx.created_at)),
 									h(
@@ -2390,49 +2384,7 @@
 									'tbody',
 									{},
 									items.map(function (tx) {
-										var moPrintTd;
-										if (
-											tx.direction === 'credit' &&
-											tx.reference
-										) {
-											var moBtn = h(
-												'button',
-												{
-													className:
-														'smlv-btn smlv-btn-sm',
-													style: 'white-space:nowrap',
-												},
-												t('printInvoice'),
-											);
-											moBtn.addEventListener(
-												'click',
-												(function (ref) {
-													return function () {
-														window.open(
-															api.base +
-																'/v1/widget/transaction/' +
-																encodeURIComponent(
-																	ref,
-																) +
-																'/invoice?widget_token=' +
-																encodeURIComponent(
-																	api.token,
-																),
-															'_blank',
-														);
-													};
-												})(tx.reference),
-											);
-											moPrintTd = h('td', {}, moBtn);
-										} else {
-											moPrintTd = h(
-												'td',
-												{
-													style: 'color:var(--smlv-muted)',
-												},
-												'—',
-											);
-										}
+										var moPrintTd = mkInvoiceTd(api, t, tx);
 										return h('tr', {}, [
 											h('td', {}, fmtDate(tx.created_at)),
 											h(
@@ -3238,49 +3190,7 @@
 									'tbody',
 									{},
 									items.map(function (tx) {
-										var rtPrintTd;
-										if (
-											tx.direction === 'credit' &&
-											tx.reference
-										) {
-											var rtBtn = h(
-												'button',
-												{
-													className:
-														'smlv-btn smlv-btn-sm',
-													style: 'white-space:nowrap',
-												},
-												t('printInvoice'),
-											);
-											rtBtn.addEventListener(
-												'click',
-												(function (ref) {
-													return function () {
-														window.open(
-															api.base +
-																'/v1/widget/transaction/' +
-																encodeURIComponent(
-																	ref,
-																) +
-																'/invoice?widget_token=' +
-																encodeURIComponent(
-																	api.token,
-																),
-															'_blank',
-														);
-													};
-												})(tx.reference),
-											);
-											rtPrintTd = h('td', {}, rtBtn);
-										} else {
-											rtPrintTd = h(
-												'td',
-												{
-													style: 'color:var(--smlv-muted)',
-												},
-												'—',
-											);
-										}
+										var rtPrintTd = mkInvoiceTd(api, t, tx);
 										return h('tr', {}, [
 											h('td', {}, fmtDate(tx.created_at)),
 											h(

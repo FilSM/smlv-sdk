@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.5] - 2026-03-25
+
+### Changed
+
+- `smlv-widget.js`: extracted `mkInvoiceTd(api, t, tx)` helper to eliminate triplicated invoice button rendering code across transactions, merchant-transactions, and retail-transactions tables
+
 ## [2.2.4] - 2026-03-24
 
 ### Fixed
