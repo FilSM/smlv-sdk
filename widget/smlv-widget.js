@@ -18,7 +18,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
 
-	var VERSION = '2.1.0';
+	var VERSION = '2.2.6';
 	var STYLE_ID = 'smlv-widget-styles';
 	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
 	var _widgetLang = 'en';
@@ -598,6 +598,7 @@
 			var depositInfo = null;
 			var order = null;
 			var pollTimer = null;
+			var currencyCode = 'SMLV'; // set from depositInfo after load
 
 			function cancelPoll() {
 				if (pollTimer) {
@@ -612,6 +613,7 @@
 				api.get('/deposit/info')
 					.then(function (res) {
 						depositInfo = res.data || {};
+						currencyCode = depositInfo.currency || 'SMLV';
 						renderForm();
 						cb.onReady && cb.onReady();
 					})
@@ -701,7 +703,7 @@
 							[
 								mkPreviewRow(
 									t('depositRate'),
-									'1\u00a0SMLV\u00a0=\u00a0' +
+									'1\u00a0' + currencyCode + '\u00a0=\u00a0' +
 										rate.toFixed(4) +
 										'\u00a0' +
 										selectedCur.code,
@@ -749,7 +751,7 @@
 							'err',
 							t('minDeposit', {
 								amount: minAmount,
-								currency: 'SMLV',
+								currency: currencyCode,
 							}),
 						);
 						errEl.className += ' smlv-amt-err';
@@ -796,7 +798,7 @@
 									{
 										style: 'font-weight:700;white-space:nowrap',
 									},
-									'SMLV',
+									currencyCode,
 								),
 							],
 						),
@@ -819,7 +821,7 @@
 							'info',
 							t('minDeposit', {
 								amount: minAmount,
-								currency: 'SMLV',
+								currency: currencyCode,
 							}),
 						),
 					);
@@ -862,12 +864,12 @@
 						[
 							mkSummRow(
 								t('depositYouGet'),
-								(order.amount_smlv || 0) + '\u00a0SMLV',
+								(order.amount_smlv || 0) + '\u00a0' + currencyCode,
 								false,
 							),
 							mkSummRow(
 								t('depositRate'),
-								'1\u00a0SMLV\u00a0=\u00a0' +
+								'1\u00a0' + currencyCode + '\u00a0=\u00a0' +
 									(order.rate || '?') +
 									'\u00a0' +
 									(order.currency || ''),
