@@ -703,7 +703,9 @@
 							[
 								mkPreviewRow(
 									t('depositRate'),
-									'1\u00a0' + currencyCode + '\u00a0=\u00a0' +
+									'1\u00a0' +
+										currencyCode +
+										'\u00a0=\u00a0' +
 										rate.toFixed(4) +
 										'\u00a0' +
 										selectedCur.code,
@@ -864,12 +866,16 @@
 						[
 							mkSummRow(
 								t('depositYouGet'),
-								(order.amount_smlv || 0) + '\u00a0' + currencyCode,
+								(order.amount_smlv || 0) +
+									'\u00a0' +
+									currencyCode,
 								false,
 							),
 							mkSummRow(
 								t('depositRate'),
-								'1\u00a0' + currencyCode + '\u00a0=\u00a0' +
+								'1\u00a0' +
+									currencyCode +
+									'\u00a0=\u00a0' +
 									(order.rate || '?') +
 									'\u00a0' +
 									(order.currency || ''),

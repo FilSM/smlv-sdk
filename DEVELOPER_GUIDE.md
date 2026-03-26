@@ -397,15 +397,15 @@ Route::post('/webhooks/smlv', [WebhookController::class, 'handle'])
 ],
 ```
 
-| Property              | Default                     | Description                              |
-| --------------------- | --------------------------- | ---------------------------------------- |
-| `apiUrl`              | `'https://api.smlvcoin.com'`| SMLV REST API base URL                   |
-| `apiKey`              | —                           | Public API key                           |
-| `apiSecret`           | —                           | Secret API signing key                   |
-| `widgetSecret`        | —                           | HMAC secret for widget token signing     |
-| `widgetUrl`           | `'https://cdn.smlvcoin.com'`| CDN base URL for the widget script       |
-| `appUrl`              | `'https://smlvcoin.com'`    | App base URL; used by `generateDepositUrl()` |
-| `widgetScriptVersion` | `'v2.2'`                    | CDN subfolder version path               |
+| Property              | Default                      | Description                                  |
+| --------------------- | ---------------------------- | -------------------------------------------- |
+| `apiUrl`              | `'https://api.smlvcoin.com'` | SMLV REST API base URL                       |
+| `apiKey`              | —                            | Public API key                               |
+| `apiSecret`           | —                            | Secret API signing key                       |
+| `widgetSecret`        | —                            | HMAC secret for widget token signing         |
+| `widgetUrl`           | `'https://cdn.smlvcoin.com'` | CDN base URL for the widget script           |
+| `appUrl`              | `'https://smlvcoin.com'`     | App base URL; used by `generateDepositUrl()` |
+| `widgetScriptVersion` | `'v2.2'`                     | CDN subfolder version path                   |
 
 **Embed widget directly in a view:**
 
@@ -439,16 +439,16 @@ echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
 ]);
 ```
 
-| Property        | Type     | Default   | Description                                      |
-| --------------- | -------- | --------- | ------------------------------------------------ |
-| `subscriberId`  | `string` | `''`      | Subscriber ID in your system                     |
-| `email`         | `string` | `''`      | Subscriber e-mail                                |
-| `widgetType`    | `string` | `'mini'`  | `'mini'` \| `'balance'` \| `'account'`          |
-| `compact`       | `bool`   | `false`   | Adds `smlv-widget-compact` CSS class             |
-| `theme`         | `string` | `'light'` | `'light'` or `'dark'`                           |
-| `language`      | `string` | auto      | BCP-47 tag; defaults to `Yii::$app->language`   |
-| `prefill`       | `array`  | `[]`      | `first_name`, `last_name`, `account_type`        |
-| `widgetOptions` | `array`  | `[]`      | Extra options forwarded to the generator         |
+| Property        | Type     | Default   | Description                                   |
+| --------------- | -------- | --------- | --------------------------------------------- |
+| `subscriberId`  | `string` | `''`      | Subscriber ID in your system                  |
+| `email`         | `string` | `''`      | Subscriber e-mail                             |
+| `widgetType`    | `string` | `'mini'`  | `'mini'` \| `'balance'` \| `'account'`        |
+| `compact`       | `bool`   | `false`   | Adds `smlv-widget-compact` CSS class          |
+| `theme`         | `string` | `'light'` | `'light'` or `'dark'`                         |
+| `language`      | `string` | auto      | BCP-47 tag; defaults to `Yii::$app->language` |
+| `prefill`       | `array`  | `[]`      | `first_name`, `last_name`, `account_type`     |
+| `widgetOptions` | `array`  | `[]`      | Extra options forwarded to the generator      |
 
 **Generate a deposit redirect URL:**
 
@@ -708,12 +708,12 @@ class Bill extends BaseDoc
 
 The guard in `getChargeAmount()` uses `resolveAccountByEmail()` — if the subscriber does **not** have a SMLV account, the charge is silently skipped and the SaaS falls back to traditional bank billing:
 
-| Subscriber state            | `resolveAccountByEmail()` | Result                          |
-| --------------------------- | ------------------------- | ------------------------------- |
-| Has SMLV account            | returns account ref       | Charged in SMLV tokens          |
-| No SMLV account             | returns `null`            | Skipped → bank invoice issued   |
-| `smlv` component absent     | —                         | Skipped (CLI, test, dev)        |
-| API error                   | exception (caught)        | Skipped, warning logged         |
+| Subscriber state        | `resolveAccountByEmail()` | Result                        |
+| ----------------------- | ------------------------- | ----------------------------- |
+| Has SMLV account        | returns account ref       | Charged in SMLV tokens        |
+| No SMLV account         | returns `null`            | Skipped → bank invoice issued |
+| `smlv` component absent | —                         | Skipped (CLI, test, dev)      |
+| API error               | exception (caught)        | Skipped, warning logged       |
 
 ### Silent skip conditions
 

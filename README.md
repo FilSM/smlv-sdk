@@ -94,14 +94,14 @@ echo $widget->generateManagementWidget($subscriber->id, $email, $options);
 echo $widget->generateAccountWidget($subscriber->id, $email, $options);
 ```
 
-| Type           | Best for                  | Account required? |
-| -------------- | ------------------------- | ----------------- |
-| `deposit`      | Standalone deposit page   | Auto-resolves     |
-| `balance`      | Balance panel / sidebar   | Auto-resolves     |
-| `mini`         | Top navbar inline bar     | No (direct fetch) |
-| `transactions` | Transaction history page  | Auto-resolves     |
-| `management`   | Account settings page     | Auto-resolves     |
-| `account`      | Subscriber detail page    | No (handles both) |
+| Type           | Best for                 | Account required? |
+| -------------- | ------------------------ | ----------------- |
+| `deposit`      | Standalone deposit page  | Auto-resolves     |
+| `balance`      | Balance panel / sidebar  | Auto-resolves     |
+| `mini`         | Top navbar inline bar    | No (direct fetch) |
+| `transactions` | Transaction history page | Auto-resolves     |
+| `management`   | Account settings page    | Auto-resolves     |
+| `account`      | Subscriber detail page   | No (handles both) |
 
 All methods return a self-contained HTML snippet:
 
@@ -290,16 +290,16 @@ echo \Smlv\Sdk\Yii2\SmlvBalanceWidget::widget([
 ]);
 ```
 
-| Property       | Type     | Default    | Description                                       |
-| -------------- | -------- | ---------- | ------------------------------------------------- |
-| `subscriberId` | `string` | `''`       | Subscriber ID in your system                      |
-| `email`        | `string` | `''`       | Subscriber e-mail                                 |
-| `widgetType`   | `string` | `'mini'`   | `'mini'` \| `'balance'` \| `'account'`            |
-| `compact`      | `bool`   | `false`    | Adds `smlv-widget-compact` CSS class              |
-| `theme`        | `string` | `'light'`  | `'light'` or `'dark'`                             |
-| `language`     | `string` | auto       | BCP-47 tag; defaults to `Yii::$app->language`     |
-| `prefill`      | `array`  | `[]`       | `first_name`, `last_name`, `account_type`         |
-| `widgetOptions`| `array`  | `[]`       | Extra options forwarded to the generator          |
+| Property        | Type     | Default   | Description                                   |
+| --------------- | -------- | --------- | --------------------------------------------- |
+| `subscriberId`  | `string` | `''`      | Subscriber ID in your system                  |
+| `email`         | `string` | `''`      | Subscriber e-mail                             |
+| `widgetType`    | `string` | `'mini'`  | `'mini'` \| `'balance'` \| `'account'`        |
+| `compact`       | `bool`   | `false`   | Adds `smlv-widget-compact` CSS class          |
+| `theme`         | `string` | `'light'` | `'light'` or `'dark'`                         |
+| `language`      | `string` | auto      | BCP-47 tag; defaults to `Yii::$app->language` |
+| `prefill`       | `array`  | `[]`      | `first_name`, `last_name`, `account_type`     |
+| `widgetOptions` | `array`  | `[]`      | Extra options forwarded to the generator      |
 
 The `mini` type automatically generates a deposit redirect URL via `generateDepositUrl()` — no extra config needed.
 
@@ -367,6 +367,7 @@ For production SaaS apps, the recommended approach is to put all charge logic in
 This is exactly the pattern used in **eGram** via `common\traits\smlv\SmlvChargeableTrait`.
 
 **The trait provides:**
+
 - `smlvBehaviorConfig()` — returns ready `SmlvChargeBehavior` config to register in `behaviors()`
 - `getChargeEmail()` — resolves subscriber email (main client contact → abonent admin user fallback)
 - `getChargeAmount()` — converts EUR price from pricelist to SMLV; **returns `null` if the subscriber has no SMLV account** (opt-in guard: no account = fall back to bank billing)
@@ -444,12 +445,12 @@ class Bill extends BaseDoc
 
 **How the opt-in guard works:**
 
-| Subscriber state            | `resolveAccountByEmail()` | Result                          |
-| --------------------------- | ------------------------- | ------------------------------- |
-| Has SMLV account            | returns account ref       | Charged in SMLV tokens          |
-| No SMLV account             | returns `null`            | Skipped → bank invoice issued   |
-| `smlv` component absent     | —                         | Skipped (CLI, test, dev)        |
-| API error                   | throws (caught)           | Skipped, warning logged         |
+| Subscriber state        | `resolveAccountByEmail()` | Result                        |
+| ----------------------- | ------------------------- | ----------------------------- |
+| Has SMLV account        | returns account ref       | Charged in SMLV tokens        |
+| No SMLV account         | returns `null`            | Skipped → bank invoice issued |
+| `smlv` component absent | —                         | Skipped (CLI, test, dev)      |
+| API error               | throws (caught)           | Skipped, warning logged       |
 
 Errors are logged to `Yii::error(..., 'smlv')` and **never break the original AR save** — the charge is best-effort.
 
