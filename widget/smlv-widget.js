@@ -18,7 +18,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
 
-	var VERSION = '2.2.6';
+	var VERSION = '2.2.7';
 	var STYLE_ID = 'smlv-widget-styles';
 	var DEFAULT_API_URL = 'https://api.smlvcoin.com';
 	var _widgetLang = 'en';
