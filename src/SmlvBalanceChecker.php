@@ -70,11 +70,21 @@ class SmlvBalanceChecker
         // Fetch from API
         $response = $this->client->getBalance($accountReference);
 
-        // Extract available balance from first currency entry.
-        // API response: data.balances[].available_balance
+        // Find balance for the configured currency; fall back to first entry.
+        // API response: data.balances[].available_balance, data.balances[].currency_code
         $balance = 0;
-        if (isset($response['data']['balances'][0]['available_balance'])) {
-            $balance = (float) $response['data']['balances'][0]['available_balance'];
+        $balances = $response['data']['balances'] ?? [];
+        $found = false;
+        foreach ($balances as $entry) {
+            $code = strtoupper((string) ($entry['currency_code'] ?? $entry['currency'] ?? ''));
+            if ($code === strtoupper($this->currency)) {
+                $balance = (float) ($entry['available_balance'] ?? 0);
+                $found = true;
+                break;
+            }
+        }
+        if (!$found && isset($balances[0]['available_balance'])) {
+            $balance = (float) $balances[0]['available_balance'];
         }
 
         // Cache the result
