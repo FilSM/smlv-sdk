@@ -3678,7 +3678,11 @@
 					cb.onReady && cb.onReady();
 				})
 				.catch(function (e) {
-					amtEl.textContent = '—';
+					if (cfg.hideIfUnregistered) {
+						root.style.display = 'none';
+					} else {
+						amtEl.textContent = '—';
+					}
 					cb.onError && cb.onError(e);
 				});
 		},

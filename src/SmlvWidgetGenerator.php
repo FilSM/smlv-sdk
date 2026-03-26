@@ -377,6 +377,10 @@ class SmlvWidgetGenerator
         if (!empty($options['is_merchant_owner'])) {
             $config['isMerchantOwner'] = true;
         }
+        // Hide the widget entirely if no SMLV account exists (useful for navbar mini widget)
+        if (!empty($options['hide_if_unregistered'])) {
+            $config['hideIfUnregistered'] = true;
+        }
         // Pre-fill withdraw form fields (IBAN, BIC, beneficiary_name) from SaaS client data
         if (!empty($options['withdraw_prefill']) && is_array($options['withdraw_prefill'])) {
             $config['withdrawPrefill'] = $options['withdraw_prefill'];
