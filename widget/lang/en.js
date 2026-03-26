@@ -135,4 +135,6 @@ window.SmlvWidgetI18n['en'] = {
 	pushUpdate: 'Update from SaaS',
 	pushUpdating: 'Updating...',
 	profileSynced: 'Profile updated from SaaS data.',
+	printInvoice: 'Print Invoice',
+	printStatement: 'Print Statement',
 };
