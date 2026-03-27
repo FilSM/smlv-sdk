@@ -2175,6 +2175,29 @@
 							url += '&type=' + encodeURIComponent(txType);
 						window.open(url, '_blank');
 					});
+					var actBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-sm',
+							style: 'white-space:nowrap',
+						},
+						t('printAct'),
+					);
+					actBtn.addEventListener('click', function () {
+						var url =
+							api.base +
+							'/v1/widget/billing/act?widget_token=' +
+							encodeURIComponent(api.token);
+						if (txDateFrom)
+							url +=
+								'&date_from=' + encodeURIComponent(txDateFrom);
+						if (txDateTo)
+							url += '&date_to=' + encodeURIComponent(txDateTo);
+						if (txCurrency)
+							url +=
+								'&currency=' + encodeURIComponent(txCurrency);
+						window.open(url, '_blank');
+					});
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
 					var selCurrency = document.createElement('select');
@@ -2292,6 +2315,7 @@
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
 							stmtBtn,
+							actBtn,
 						]),
 					);
 					var listEl = document.createElement('div');
@@ -2981,6 +3005,29 @@
 							url += '&type=' + encodeURIComponent(txType);
 						window.open(url, '_blank');
 					});
+					var actBtn = h(
+						'button',
+						{
+							className: 'smlv-btn smlv-btn-sm',
+							style: 'white-space:nowrap',
+						},
+						t('printAct'),
+					);
+					actBtn.addEventListener('click', function () {
+						var url =
+							api.base +
+							'/v1/widget/billing/act?widget_token=' +
+							encodeURIComponent(api.token);
+						if (txDateFrom)
+							url +=
+								'&date_from=' + encodeURIComponent(txDateFrom);
+						if (txDateTo)
+							url += '&date_to=' + encodeURIComponent(txDateTo);
+						if (txCurrency)
+							url +=
+								'&currency=' + encodeURIComponent(txCurrency);
+						window.open(url, '_blank');
+					});
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
 					var selCurrency = document.createElement('select');
@@ -3098,6 +3145,7 @@
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
 							stmtBtn,
+							actBtn,
 						]),
 					);
 					var listEl = document.createElement('div');
