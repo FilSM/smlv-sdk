@@ -140,7 +140,7 @@ window.SmlvWidgetI18n['lv'] = {
 	pushUpdate: 'Atjaunin\u0101t no SaaS',
 	pushUpdating: 'Atjaunina...',
 	profileSynced: 'Profils atjaunin\u0101ts no SaaS datiem.',
-        printInvoice: 'Druk\u0101t r\u0113\u0137inu',
-        printStatement: 'Druk\u0101t izrakstu',
-        printAct: 'Druk\u0101t aktu',
+	printInvoice: 'Druk\u0101t r\u0113\u0137inu',
+	printStatement: 'Druk\u0101t izrakstu',
+	printAct: 'Druk\u0101t aktu',
 };

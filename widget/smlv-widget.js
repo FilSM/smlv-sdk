@@ -274,8 +274,10 @@
 		return h('div', { className: 'smlv-alert smlv-alert-' + type }, msg);
 	}
 
-	function mkInvoiceTd(api, t, tx) {
-		if (tx.direction === 'credit' && tx.reference) {
+	function mkInvoiceTd(api, t, tx, invoiceBasePath) {
+		var basePath = invoiceBasePath || '/v1/widget/transaction';
+		var isCredit = tx.direction === 'credit' || tx.direction === 'inbound';
+		if (isCredit && tx.reference) {
 			var btn = h(
 				'button',
 				{
@@ -286,18 +288,19 @@
 			);
 			btn.addEventListener(
 				'click',
-				(function (ref) {
+				(function (ref, bp) {
 					return function () {
 						window.open(
 							api.base +
-								'/v1/widget/transaction/' +
+								bp +
+								'/' +
 								encodeURIComponent(ref) +
 								'/invoice?widget_token=' +
 								encodeURIComponent(api.token),
 							'_blank',
 						);
 					};
-				})(tx.reference),
+				})(tx.reference, basePath),
 			);
 			return h('td', {}, btn);
 		}
@@ -2161,7 +2164,7 @@
 					stmtBtn.addEventListener('click', function () {
 						var url =
 							api.base +
-							'/v1/widget/transactions/statement?widget_token=' +
+							'/v1/widget/merchant/transactions/statement?widget_token=' +
 							encodeURIComponent(api.token);
 						if (txDateFrom)
 							url +=
@@ -2186,7 +2189,7 @@
 					actBtn.addEventListener('click', function () {
 						var url =
 							api.base +
-							'/v1/widget/billing/act?widget_token=' +
+							'/v1/widget/merchant/billing/act?widget_token=' +
 							encodeURIComponent(api.token);
 						if (txDateFrom)
 							url +=
@@ -2337,7 +2340,7 @@
 						if (txDateFrom) params.date_from = txDateFrom;
 						if (txDateTo) params.date_to = txDateTo;
 						if (txCurrency) params.currency = txCurrency;
-						api.get('/transaction', params)
+						api.get('/merchant/transactions', params)
 							.then(function (res) {
 								if (seq !== txSeq) return;
 								var s = listEl.querySelector('.smlv-spin-wrap');
@@ -2416,7 +2419,7 @@
 									'tbody',
 									{},
 									items.map(function (tx) {
-										var moPrintTd = mkInvoiceTd(api, t, tx);
+										var moPrintTd = mkInvoiceTd(api, t, tx, '/v1/widget/merchant/transaction');
 										return h('tr', {}, [
 											h('td', {}, fmtDate(tx.created_at)),
 											h(
