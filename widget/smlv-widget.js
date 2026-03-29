@@ -3342,12 +3342,12 @@
 									}),
 								);
 
-								var rtTotalAmt = items.reduce(function (s, tx) {
-									return s + (tx.amount || 0);
-								}, 0);
-								var rtTotalFee = items.reduce(function (s, tx) {
-									return s + (tx.fee || 0);
-								}, 0);
+								var rtTotalAmt = res.data.total_amount !== undefined
+									? res.data.total_amount
+									: items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
+								var rtTotalFee = res.data.total_fee !== undefined
+									? res.data.total_fee
+									: items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
 								var rtTfoot = h('tfoot', {}, [
 									h(
 										'tr',
