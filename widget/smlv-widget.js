@@ -2142,6 +2142,7 @@
 					var txDateFrom = '';
 					var txDateTo = '';
 					var txCurrency = '';
+					var txFilterDir = '';
 
 					var COLS = [
 						{ key: 'created_at', label: t('colDate') },
@@ -2176,6 +2177,8 @@
 								'&currency=' + encodeURIComponent(txCurrency);
 						if (txType)
 							url += '&type=' + encodeURIComponent(txType);
+						if (txFilterDir)
+							url += '&dir=' + encodeURIComponent(txFilterDir);
 						window.open(url, '_blank');
 					});
 					var actBtn = h(
@@ -2204,6 +2207,7 @@
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
 					var selCurrency = document.createElement('select');
+					var selDir = document.createElement('select');
 					(function () {
 						var opt = document.createElement('option');
 						opt.value = '';
@@ -2263,11 +2267,22 @@
 						e.textContent = o[1];
 						selStatus.appendChild(e);
 					});
+					[
+						['', t('filterDir_all')],
+						['debit', t('filterDir_debit')],
+						['credit', t('filterDir_credit')],
+					].forEach(function (o) {
+						var e = document.createElement('option');
+						e.value = o[0];
+						e.textContent = o[1];
+						selDir.appendChild(e);
+					});
 					var dateRe = /^\d{4}-\d{2}-\d{2}$/;
 					function onFlt() {
 						txType = selType.value;
 						txStatus = selStatus.value;
 						txCurrency = selCurrency.value;
+						txFilterDir = selDir.value;
 						txDateFrom =
 							inpFrom.value && dateRe.test(inpFrom.value)
 								? inpFrom.value
@@ -2282,6 +2297,7 @@
 					selType.addEventListener('change', onFlt);
 					selStatus.addEventListener('change', onFlt);
 					selCurrency.addEventListener('change', onFlt);
+					selDir.addEventListener('change', onFlt);
 					var rstBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
@@ -2291,6 +2307,7 @@
 						selType.value = '';
 						selStatus.value = '';
 						selCurrency.value = '';
+						selDir.value = '';
 						if (inpFrom._fp) {
 							inpFrom._fp.clear(false);
 						} else {
@@ -2304,6 +2321,7 @@
 						txType = '';
 						txStatus = '';
 						txCurrency = '';
+						txFilterDir = '';
 						txDateFrom = '';
 						txDateTo = '';
 						txPage = 1;
@@ -2314,6 +2332,7 @@
 							h('label', {}, [t('filterType'), selType]),
 							h('label', {}, [t('filterStatus'), selStatus]),
 							h('label', {}, [t('filterCurrency'), selCurrency]),
+							h('label', {}, [t('filterDir'), selDir]),
 							h('label', {}, [t('filterDateFrom'), inpFrom]),
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
@@ -2340,6 +2359,7 @@
 						if (txDateFrom) params.date_from = txDateFrom;
 						if (txDateTo) params.date_to = txDateTo;
 						if (txCurrency) params.currency = txCurrency;
+						if (txFilterDir) params.dir = txFilterDir;
 						api.get('/merchant/transactions', params)
 							.then(function (res) {
 								if (seq !== txSeq) return;
@@ -2419,7 +2439,12 @@
 									'tbody',
 									{},
 									items.map(function (tx) {
-										var moPrintTd = mkInvoiceTd(api, t, tx, '/v1/widget/merchant/transaction');
+										var moPrintTd = mkInvoiceTd(
+											api,
+											t,
+											tx,
+											'/v1/widget/merchant/transaction',
+										);
 										return h('tr', {}, [
 											h('td', {}, fmtDate(tx.created_at)),
 											h(
@@ -2971,6 +2996,7 @@
 					var txDateFrom = '';
 					var txDateTo = '';
 					var txCurrency = '';
+					var txFilterDir = '';
 
 					var COLS = [
 						{ key: 'created_at', label: t('colDate') },
@@ -3006,6 +3032,8 @@
 								'&currency=' + encodeURIComponent(txCurrency);
 						if (txType)
 							url += '&type=' + encodeURIComponent(txType);
+						if (txFilterDir)
+							url += '&dir=' + encodeURIComponent(txFilterDir);
 						window.open(url, '_blank');
 					});
 					var actBtn = h(
@@ -3034,6 +3062,7 @@
 					var selType = document.createElement('select');
 					var selStatus = document.createElement('select');
 					var selCurrency = document.createElement('select');
+					var selDir = document.createElement('select');
 					(function () {
 						var opt = document.createElement('option');
 						opt.value = '';
@@ -3093,11 +3122,22 @@
 						e.textContent = o[1];
 						selStatus.appendChild(e);
 					});
+					[
+						['', t('filterDir_all')],
+						['debit', t('filterDir_debit')],
+						['credit', t('filterDir_credit')],
+					].forEach(function (o) {
+						var e = document.createElement('option');
+						e.value = o[0];
+						e.textContent = o[1];
+						selDir.appendChild(e);
+					});
 					var dateRe = /^\d{4}-\d{2}-\d{2}$/;
 					function onFlt() {
 						txType = selType.value;
 						txStatus = selStatus.value;
 						txCurrency = selCurrency.value;
+						txFilterDir = selDir.value;
 						txDateFrom =
 							inpFrom.value && dateRe.test(inpFrom.value)
 								? inpFrom.value
@@ -3112,6 +3152,7 @@
 					selType.addEventListener('change', onFlt);
 					selStatus.addEventListener('change', onFlt);
 					selCurrency.addEventListener('change', onFlt);
+					selDir.addEventListener('change', onFlt);
 					var rstBtn = h(
 						'button',
 						{ className: 'smlv-btn smlv-btn-sm smlv-fltr-rst' },
@@ -3121,6 +3162,7 @@
 						selType.value = '';
 						selStatus.value = '';
 						selCurrency.value = '';
+						selDir.value = '';
 						if (inpFrom._fp) {
 							inpFrom._fp.clear(false);
 						} else {
@@ -3134,6 +3176,7 @@
 						txType = '';
 						txStatus = '';
 						txCurrency = '';
+						txFilterDir = '';
 						txDateFrom = '';
 						txDateTo = '';
 						txPage = 1;
@@ -3144,6 +3187,7 @@
 							h('label', {}, [t('filterType'), selType]),
 							h('label', {}, [t('filterStatus'), selStatus]),
 							h('label', {}, [t('filterCurrency'), selCurrency]),
+							h('label', {}, [t('filterDir'), selDir]),
 							h('label', {}, [t('filterDateFrom'), inpFrom]),
 							h('label', {}, [t('filterDateTo'), inpTo]),
 							rstBtn,
@@ -3170,6 +3214,7 @@
 						if (txDateFrom) params.date_from = txDateFrom;
 						if (txDateTo) params.date_to = txDateTo;
 						if (txCurrency) params.currency = txCurrency;
+						if (txFilterDir) params.dir = txFilterDir;
 						api.get('/transaction', params)
 							.then(function (res) {
 								if (seq !== txSeq) return;
