@@ -1305,12 +1305,12 @@
 								]);
 							}),
 						);
-						var stTotalAmt = items.reduce(function (s, tx) {
-							return s + (tx.amount || 0);
-						}, 0);
-						var stTotalFee = items.reduce(function (s, tx) {
-							return s + (tx.fee || 0);
-						}, 0);
+						var stTotalAmt = res.data.total_amount !== undefined
+							? res.data.total_amount
+							: items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
+						var stTotalFee = res.data.total_fee !== undefined
+							? res.data.total_fee
+							: items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
 						var stTfoot = h('tfoot', {}, [
 							h(
 								'tr',
@@ -2492,12 +2492,12 @@
 									}),
 								);
 
-								var moTotalAmt = items.reduce(function (s, tx) {
-									return s + (tx.amount || 0);
-								}, 0);
-								var moTotalFee = items.reduce(function (s, tx) {
-									return s + (tx.fee || 0);
-								}, 0);
+								var moTotalAmt = res.data.total_amount !== undefined
+									? res.data.total_amount
+									: items.reduce(function (s, tx) { return s + (tx.amount || 0); }, 0);
+								var moTotalFee = res.data.total_fee !== undefined
+									? res.data.total_fee
+									: items.reduce(function (s, tx) { return s + (tx.fee || 0); }, 0);
 								var moTfoot = h('tfoot', {}, [
 									h(
 										'tr',
