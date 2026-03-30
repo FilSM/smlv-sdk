@@ -20,7 +20,7 @@ window.SmlvWidgetI18n['lv'] = {
 	selectCurrency: 'Izv\u0113lieties val\u016btu',
 	minDeposit: 'Min. depoz\u012bts: {amount}\u00a0{currency}',
 	buyNow: 'Pirkt SMLV',
-	depositAmountLabel: 'Depoz\u012bta summa',
+	depositAmountLabel: 'V\u0113los izt\u0113r\u0113t',
 	depositPayWith: 'Maks\u0101t ar',
 	depositRate: 'Kurss',
 	depositFee: 'Platformas komisija',

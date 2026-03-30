@@ -643,7 +643,7 @@
 				// Amount input
 				var amtInp = document.createElement('input');
 				amtInp.type = 'number';
-				amtInp.min = minAmount > 0 ? minAmount : '0.01';
+				amtInp.min = '0.01';
 				amtInp.step = '0.01';
 				amtInp.className = 'smlv-input';
 				amtInp.placeholder = '0.00';
@@ -687,16 +687,14 @@
 				}
 
 				function updatePreview() {
-					var amt = parseFloat(amtInp.value) || 0;
+					var fiatToSpend = parseFloat(amtInp.value) || 0;
 					previewEl.innerHTML = '';
-					if (amt <= 0) return;
+					if (fiatToSpend <= 0) return;
 					var rate = parseFloat(selectedCur.rate) || 1;
-					var amtFiat = Math.round(amt * rate * 100) / 100;
-					var feeAmt =
-						Math.round(
-							((amtFiat * feePercent) / 100 + feeFixed) * 100,
-						) / 100;
-					var totalDue = Math.round((amtFiat + feeAmt) * 100) / 100;
+					var divisor = 1 + feePercent / 100;
+					var netFiat = Math.max(0, (fiatToSpend - feeFixed) / divisor);
+					var feeAmt = Math.round((netFiat * feePercent / 100 + feeFixed) * 100) / 100;
+					var amtSmlv = Math.round(netFiat / rate * 1e8) / 1e8;
 					previewEl.appendChild(
 						h(
 							'div',
@@ -725,10 +723,10 @@
 									false,
 								),
 								mkPreviewRow(
-									t('depositTotal'),
-									totalDue.toFixed(2) +
+									t('depositYouGet'),
+									amtSmlv.toFixed(8) +
 										'\u00a0' +
-										selectedCur.code,
+										currencyCode,
 									true,
 								),
 							],
@@ -747,16 +745,22 @@
 					t('buyNow'),
 				);
 				buyBtn.addEventListener('click', function () {
-					var amt = parseFloat(amtInp.value) || 0;
-					if (amt <= 0) return;
-					if (minAmount > 0 && amt < minAmount) {
+					var fiatToSpend = parseFloat(amtInp.value) || 0;
+					if (fiatToSpend <= 0) return;
+					var rate = parseFloat(selectedCur.rate) || 1;
+					var divisor = 1 + feePercent / 100;
+					var netFiat = Math.max(0, (fiatToSpend - feeFixed) / divisor);
+					var amtSmlv = Math.round(netFiat / rate * 1e8) / 1e8;
+					if (amtSmlv <= 0) return;
+					if (minAmount > 0 && amtSmlv < minAmount) {
+						var minFiat = Math.round((minAmount * rate * divisor + feeFixed) * 100) / 100;
 						var existErr = card.querySelector('.smlv-amt-err');
 						if (existErr) existErr.remove();
 						var errEl = alertBox(
 							'err',
 							t('minDeposit', {
-								amount: minAmount,
-								currency: currencyCode,
+								amount: minFiat,
+								currency: selectedCur.code,
 							}),
 						);
 						errEl.className += ' smlv-amt-err';
@@ -766,7 +770,7 @@
 					buyBtn.disabled = true;
 					buyBtn.textContent = t('loading');
 					api.post('/deposit/buy', {
-						amount_smlv: amt,
+						amount_smlv: amtSmlv,
 						from_currency: selectedCur.code,
 					})
 						.then(function (res) {
@@ -798,35 +802,20 @@
 							},
 							[
 								amtInp,
-								h(
-									'span',
-									{
-										style: 'font-weight:700;white-space:nowrap',
-									},
-									currencyCode,
-								),
+								sel,
 							],
 						),
 					]),
 				);
-				card.appendChild(
-					h('div', { className: 'smlv-field' }, [
-						h(
-							'label',
-							{ className: 'smlv-label' },
-							t('depositPayWith'),
-						),
-						sel,
-					]),
-				);
 				card.appendChild(previewEl);
 				if (minAmount > 0) {
+					var minFiatHint = Math.round((minAmount * (parseFloat(selectedCur.rate) || 1) * (1 + feePercent / 100) + feeFixed) * 100) / 100;
 					card.appendChild(
 						alertBox(
 							'info',
 							t('minDeposit', {
-								amount: minAmount,
-								currency: currencyCode,
+								amount: minFiatHint,
+								currency: selectedCur.code,
 							}),
 						),
 					);

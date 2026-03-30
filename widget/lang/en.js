@@ -20,7 +20,7 @@ window.SmlvWidgetI18n['en'] = {
 	selectCurrency: 'Select currency',
 	minDeposit: 'Minimum deposit: {amount}\u00a0{currency}',
 	buyNow: 'Buy SMLV',
-	depositAmountLabel: 'Amount to deposit',
+	depositAmountLabel: 'I want to spend',
 	depositPayWith: 'Pay with',
 	depositRate: 'Rate',
 	depositFee: 'Platform fee',
